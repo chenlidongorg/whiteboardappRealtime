@@ -98,27 +98,39 @@ export class Chat extends Server<Env> {
     }
   }
 
-  onClose(connection: Connection) {
-      this.connections.delete(connection);
-    }
+
 }
 
 export default {
-  async fetch(request: Request, env: Env) {
-    // 处理OPTIONS请求
-    if (request.method === 'OPTIONS') {
-      return new Response(null, {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    // 检查是否是WebSocket请求
+    if (request.headers.get("Upgrade") === "websocket") {
+      // 创建WebSocket对
+      const pair = new WebSocketPair();
+      const [client, server] = Object.values(pair);
+
+      // 处理WebSocket连接
+      server.accept();
+
+      // 错误处理
+      server.addEventListener('error', (error) => {
+        console.error('WebSocket错误:', error);
+      });
+
+      // 设置响应头
+      const response = new Response(null, {
+        status: 101,
+        webSocket: client,
         headers: {
           'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': '*',
           'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
-        },
+        }
       });
+
+      return response;
     }
 
-    return (
-      (await routePartykitRequest(request, env)) ||
-      env.ASSETS.fetch(request)
-    );
-  },
-} satisfies ExportedHandler<Env>;
+    return new Response('Expected WebSocket', { status: 426 });
+  }
+};
