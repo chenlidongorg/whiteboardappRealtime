@@ -43,13 +43,13 @@ export class Chat extends Server<Env> {
   }
 
   onConnect(connection: Connection) {
-      this.connections.add(connection);
-      // 发送当前状态给新连接的客户端
-      connection.send(JSON.stringify({
-        type: "connected",
-        message: "Successfully connected to whiteboard"
-      }));
-    }
+    connection.send(
+      JSON.stringify({
+        type: "all",
+        messages: this.messages,
+      } satisfies Message),
+    );
+  }
 
   saveMessage(message: ChatMessage) {
     // check if the message already exists
@@ -86,10 +86,6 @@ export class Chat extends Server<Env> {
       this.saveMessage(parsed);
     }
   }
-
-  onClose(connection: Connection) {
-      this.connections.delete(connection);
-    }
 }
 
 export default {
