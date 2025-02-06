@@ -18,7 +18,7 @@ function App() {
   const { room } = useParams();
 
   const socket = usePartySocket({
-    party: "chat",
+    party: "Whiteboard Real Time",
     room,
     onMessage: (evt) => {
       const message = JSON.parse(evt.data as string) as Message;
