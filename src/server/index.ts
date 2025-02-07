@@ -14,6 +14,14 @@ interface RoomData {
   drawingData: any[];
 }
 
+interface WebSocketMessage {
+  type: string;
+  content?: any;
+  roomId?: string;
+  userId?: string;
+  userName?: string;
+}
+
 export class Chat extends Server<Env> {
   static options = {
     hibernate: true,
@@ -24,14 +32,10 @@ export class Chat extends Server<Env> {
     }
   };
 
-  // 存储所有房间数据
   private rooms = new Map<string, RoomData>();
-
-  // 存储连接到用户的映射
   private connectionToUser = new Map<Connection, string>();
 
   onStart() {
-    // 初始化数据库
     this.ctx.storage.sql.exec(`
       CREATE TABLE IF NOT EXISTS messages (
         id TEXT PRIMARY KEY,
@@ -46,8 +50,15 @@ export class Chat extends Server<Env> {
   }
 
   onConnect(connection: Connection) {
-    // 等待加入房间的消息
     console.log("New connection established");
+  }
+
+  private checkConnection(connection: Connection): boolean {
+    if (!connection || !this.connections.has(connection)) {
+      console.error('Invalid connection');
+      return false;
+    }
+    return true;
   }
 
   private createRoom(roomId: string): RoomData {
@@ -89,39 +100,47 @@ export class Chat extends Server<Env> {
   }
 
   onMessage(connection: Connection, message: WSMessage) {
+    if (!this.checkConnection(connection)) return;
+
     try {
-      const data = JSON.parse(message as string);
+      const data = JSON.parse(message as string) as WebSocketMessage;
+      if (!data.type) {
+        throw new Error('Missing message type');
+      }
 
       switch (data.type) {
         case 'createRoom':
           this.handleCreateRoom(connection, data);
           break;
-
         case 'join':
           this.handleJoin(connection, data);
           break;
-
         case 'chat':
           this.handleChat(connection, data);
           break;
-
         case 'draw':
           this.handleDraw(connection, data);
           break;
-
         case 'clear':
           this.handleClear(connection, data);
           break;
+        default:
+          console.warn('Unknown message type:', data.type);
       }
     } catch (error) {
       console.error('Error processing message:', error);
+      connection.send(JSON.stringify({
+        type: 'error',
+        content: 'Invalid message format'
+      }));
     }
   }
 
-  private handleCreateRoom(connection: Connection, data: any) {
+  private handleCreateRoom(connection: Connection, data: WebSocketMessage) {
     const { roomId, userId, userName } = data;
-    const room = this.getOrCreateRoom(roomId);
+    if (!roomId || !userId || !userName) return;
 
+    const room = this.getOrCreateRoom(roomId);
     const user: UserSession = {
       userId,
       userName,
@@ -132,7 +151,6 @@ export class Chat extends Server<Env> {
     room.users.set(userId, user);
     this.connectionToUser.set(connection, userId);
 
-    // 发送房间初始状态
     connection.send(JSON.stringify({
       type: "init",
       content: {
@@ -143,21 +161,22 @@ export class Chat extends Server<Env> {
     }));
   }
 
-  private handleJoin(connection: Connection, data: any) {
+  private handleJoin(connection: Connection, data: WebSocketMessage) {
+    if (!data.content) return;
     const { userId, userName, roomId, role } = data.content;
-    const room = this.getOrCreateRoom(roomId);
+    if (!roomId || !userId || !userName) return;
 
+    const room = this.getOrCreateRoom(roomId);
     const user: UserSession = {
       userId,
       userName,
-      role,
+      role: role || UserRole.VIEWER,
       roomId
     };
 
     room.users.set(userId, user);
     this.connectionToUser.set(connection, userId);
 
-    // 发送房间初始状态
     connection.send(JSON.stringify({
       type: "init",
       content: {
@@ -167,16 +186,13 @@ export class Chat extends Server<Env> {
       }
     }));
 
-    // 广播系统消息
     this.sendSystemMessage(roomId, `${userName} 加入了房间`);
-
-    // 广播用户列表更新
     this.broadcastUserList(roomId);
   }
 
-  private handleChat(connection: Connection, data: any) {
+  private handleChat(connection: Connection, data: WebSocketMessage) {
     const userId = this.connectionToUser.get(connection);
-    if (!userId) return;
+    if (!userId || !data.content) return;
 
     const room = this.findRoomByUserId(userId);
     if (!room) return;
@@ -202,9 +218,9 @@ export class Chat extends Server<Env> {
     });
   }
 
-  private handleDraw(connection: Connection, data: any) {
+  private handleDraw(connection: Connection, data: WebSocketMessage) {
     const userId = this.connectionToUser.get(connection);
-    if (!userId) return;
+    if (!userId || !data.content) return;
 
     const room = this.findRoomByUserId(userId);
     if (!room) return;
@@ -219,7 +235,7 @@ export class Chat extends Server<Env> {
     }, connection);
   }
 
-  private handleClear(connection: Connection, data: any) {
+  private handleClear(connection: Connection, data: WebSocketMessage) {
     const userId = this.connectionToUser.get(connection);
     if (!userId) return;
 
@@ -281,6 +297,14 @@ export class Chat extends Server<Env> {
     );
   }
 
+  private cleanupEmptyRooms() {
+    for (const [roomId, room] of this.rooms) {
+      if (room.users.size === 0) {
+        this.rooms.delete(roomId);
+      }
+    }
+  }
+
   onClose(connection: Connection) {
     const userId = this.connectionToUser.get(connection);
     if (userId) {
@@ -296,34 +320,31 @@ export class Chat extends Server<Env> {
       this.connectionToUser.delete(connection);
     }
     this.connections.delete(connection);
+    this.cleanupEmptyRooms();
+  }
+
+  static async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    if (request.headers.get("upgrade") === "websocket") {
+      const pair = new WebSocketPair();
+      const [client, server] = Object.values(pair);
+
+      const chat = new Chat();
+      await chat.handleWebSocket(server);
+
+      return new Response(null, {
+        status: 101,
+        webSocket: client,
+        headers: {
+          'Upgrade': 'websocket',
+          'Connection': 'Upgrade'
+        }
+      });
+    }
+
+    return env.ASSETS.fetch(request);
   }
 }
-// src/server/index.ts 中的 fetch 函数修改
-// src/server/index.ts
 
 export default {
-     async fetch(request: Request, env: Env, ctx: ExecutionContext) {
-       const upgradeHeader = request.headers.get('Upgrade');
-
-       // 检查是否为 WebSocket 升级请求
-       if (upgradeHeader && upgradeHeader.toLowerCase() === 'websocket') {
-         const [client, server] = Object.values(new WebSocketPair());
-
-         // 接受服务器端的 WebSocket 连接
-         server.accept();
-
-         // 处理 WebSocket 连接
-         const chat = new Chat();
-         chat.handleWebSocket(server);
-
-         // 返回响应，不需要手动设置头部
-         return new Response(null, {
-           status: 101,
-           webSocket: client,
-         });
-       }
-
-       // 处理其他请求，例如静态资源
-       return env.ASSETS.fetch(request);
-     }
-   };
+  fetch: Chat.fetch
+};
