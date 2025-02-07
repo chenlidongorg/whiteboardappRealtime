@@ -5,8 +5,7 @@
   "websocket":true,
   "migrations": [
     {
-      "new_sqlite_classes": ["WhieteboardRealTime"],
-      "new_classes": ["WhieteboardRealTime"],
+      "new_classes": ["Chat"],
       "tag": "v1"
     }
   ],
@@ -21,7 +20,7 @@
   "durable_objects": {
     "bindings": [
       {
-        "class_name": "WhieteboardRealTime",
+        "class_name": "Chat",
         "name": "WhieteboardRealTime"
       }
     ]

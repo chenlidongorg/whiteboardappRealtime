@@ -15,7 +15,7 @@ interface WebSocketMessage {
 }
 
 
-export class WhieteboardRealTime {
+export class Chat {
   private users: Map<string, UserSession> = new Map();
   private messages: ChatMessage[] = [];
   private drawingData: any[] = [];
