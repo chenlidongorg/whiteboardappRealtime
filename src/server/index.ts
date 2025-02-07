@@ -8,6 +8,8 @@ import {
 
 import { ChatMessage, UserRole, UserSession, MessageType } from "../shared";
 
+import { createHash } from 'crypto';
+
 interface RoomData {
   users: Map<string, UserSession>;
   messages: ChatMessage[];
@@ -364,9 +366,7 @@ export default {
 };
 
 // 计算WebSocket Accept Key
-function computeAcceptKey(key: string): string {
-  const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
-  const acceptKey = key + GUID;
-  const hash = crypto.createHash('sha1').update(acceptKey).digest('base64');
-  return hash;
+function computeAcceptKey(secWebSocketKey: string) {
+  const magicString = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
+  return createHash('sha1').update(secWebSocketKey + magicString).digest('base64');
 }
