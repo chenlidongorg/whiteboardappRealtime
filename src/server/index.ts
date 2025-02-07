@@ -15,7 +15,7 @@ interface WebSocketMessage {
 }
 
 
-export class Chat extends DurableObject {
+export class Chat {
   private users: Map<string, UserSession> = new Map();
   private messages: ChatMessage[] = [];
   private drawingData: any[] = [];
