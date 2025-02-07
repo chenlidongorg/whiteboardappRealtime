@@ -4,9 +4,9 @@
   "name": "whiteboardrealtime",
   "migrations": [
     {
-      "new_sqlite_classes": ["Chat"],
+      "new_sqlite_classes": ["Chat", "WhiteboardRoom"],
+      "new_classes": ["WhiteboardRoom"],
       "tag": "v1"
-
     }
   ],
   "assets": {
@@ -22,6 +22,10 @@
       {
         "class_name": "Chat",
         "name": "Chat"
+      },
+      {
+        "class_name": "WhiteboardRoom",
+        "name": "WHITEBOARD"
       }
     ]
   },
