@@ -1,24 +1,15 @@
 // src/server/index.ts
-import { Server, Connection } from "partyserver";
 
-// 定义消息类型
-interface WhiteboardMessage {
-  type: 'join' | 'leave' | 'draw' | 'clear' | 'chat';
-  userId: string;
-  roomId: string;
-  content: any;
-  timestamp: number;
-}
+import {
+  type Connection,
+  Server,
+  type WSMessage,
+} from "partyserver";
 
-// 定义用户信息
-interface User {
-  id: string;
-  name: string;
-  role: 'creator' | 'editor' | 'viewer';
-}
+import type { ChatMessage, Message } from "../shared";
 
-export class WhiteboardRoom extends Server<Env> {
-  // 配置选项
+// 导出 Chat 类 (之前的主要功能都保留)
+export class Chat extends Server<Env> {
   static options = {
     hibernate: true,
     headers: {
@@ -28,191 +19,150 @@ export class WhiteboardRoom extends Server<Env> {
     }
   };
 
-  // 类属性
-  private connections = new Map<string, Connection>(); // userId -> connection
-  private users = new Map<string, User>(); // userId -> user
-  private drawingData: any[] = []; // 存储绘画数据
-  private chatHistory: any[] = []; // 存储聊天记录
+  connections = new Set<Connection>();
+  messages = [] as ChatMessage[];
+  drawingData: any[] = []; // 存储绘画数据
+  participants = new Map<string, string>(); // userId -> userName
 
-  // 当服务器启动时
   onStart() {
-    // 从数据库加载持久化数据
-    this.loadPersistedData();
+    // 初始化数据库
+    this.ctx.storage.sql.exec(
+      `CREATE TABLE IF NOT EXISTS messages (
+        id TEXT PRIMARY KEY,
+        user TEXT,
+        role TEXT,
+        content TEXT,
+        timestamp INTEGER
+      )`
+    );
+
+    // 加载历史消息
+    this.messages = this.ctx.storage.sql
+      .exec(`SELECT * FROM messages ORDER BY timestamp DESC LIMIT 100`)
+      .toArray() as ChatMessage[];
   }
 
-  // 当新客户端连接时
   onConnect(connection: Connection) {
+    this.connections.add(connection);
+
     // 发送当前状态给新连接的客户端
     connection.send(JSON.stringify({
-      type: 'init',
+      type: "init",
       data: {
-        users: Array.from(this.users.values()),
+        messages: this.messages,
         drawingData: this.drawingData,
-        chatHistory: this.chatHistory
+        participants: Array.from(this.participants.entries())
       }
     }));
   }
 
-  // 处理收到的消息
-  onMessage(connection: Connection, message: string) {
+  // 保存消息到数据库
+  saveMessage(message: ChatMessage) {
+    const existingMessage = this.messages.find((m) => m.id === message.id);
+    if (existingMessage) {
+      this.messages = this.messages.map((m) =>
+        m.id === message.id ? message : m
+      );
+    } else {
+      this.messages.push(message);
+    }
+
+    // 保存到数据库
+    this.ctx.storage.sql.exec(
+      `INSERT INTO messages (id, user, role, content, timestamp)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT (id) DO UPDATE SET
+       content = ?, timestamp = ?`,
+      [
+        message.id,
+        message.user,
+        message.role,
+        JSON.stringify(message.content),
+        Date.now(),
+        JSON.stringify(message.content),
+        Date.now()
+      ]
+    );
+  }
+
+  onMessage(connection: Connection, message: WSMessage) {
     try {
-      const data = JSON.parse(message) as WhiteboardMessage;
+      const data = JSON.parse(message as string);
 
       switch (data.type) {
         case 'join':
           this.handleJoin(connection, data);
           break;
 
-        case 'leave':
-          this.handleLeave(data.userId);
-          break;
-
         case 'draw':
           this.handleDraw(data);
-          break;
-
-        case 'clear':
-          this.handleClear(data);
           break;
 
         case 'chat':
           this.handleChat(data);
           break;
+
+        case 'clear':
+          this.handleClear();
+          break;
+
+        case 'add':
+        case 'update':
+          this.saveMessage(data);
+          break;
       }
 
-      // 保存状态
-      this.persistState();
+      // 广播消息给其他客户端
+      this.broadcast(message as string, connection);
 
     } catch (error) {
       console.error('Error processing message:', error);
-      connection.send(JSON.stringify({
-        type: 'error',
-        message: 'Invalid message format'
-      }));
     }
   }
 
-  // 处理加入房间
-  private handleJoin(connection: Connection, data: WhiteboardMessage) {
-    const { userId, content } = data;
-
-    // 存储用户信息和连接
-    this.connections.set(userId, connection);
-    this.users.set(userId, {
-      id: userId,
-      name: content.userName,
-      role: content.isCreator ? 'creator' : (content.canEdit ? 'editor' : 'viewer')
-    });
+  private handleJoin(connection: Connection, data: any) {
+    const { userId, userName } = data.content;
+    this.participants.set(userId, userName);
 
     // 广播新用户加入
-    this.broadcast({
+    this.broadcast(JSON.stringify({
       type: 'userJoined',
-      user: this.users.get(userId)
-    });
+      content: { userId, userName }
+    }));
   }
 
-  // 处理离开房间
-  private handleLeave(userId: string) {
-    this.connections.delete(userId);
-    this.users.delete(userId);
-
-    // 广播用户离开
-    this.broadcast({
-      type: 'userLeft',
-      userId
-    });
-  }
-
-  // 处理绘画数据
-  private handleDraw(data: WhiteboardMessage) {
+  private handleDraw(data: any) {
     this.drawingData.push(data.content);
-
-    // 广播绘画数据
-    this.broadcast({
-      type: 'draw',
-      data: data.content
-    });
   }
 
-  // 处理清除画板
-  private handleClear(data: WhiteboardMessage) {
+  private handleChat(data: any) {
+    const chatMessage = {
+      id: crypto.randomUUID(),
+      user: data.userId,
+      role: 'user',
+      content: data.content.text,
+      timestamp: Date.now()
+    };
+
+    this.saveMessage(chatMessage);
+  }
+
+  private handleClear() {
     this.drawingData = [];
-
     // 广播清除命令
-    this.broadcast({
-      type: 'clear'
-    });
+    this.broadcast(JSON.stringify({ type: 'clear' }));
   }
 
-  // 处理聊天消息
-  private handleChat(data: WhiteboardMessage) {
-    this.chatHistory.push({
-      userId: data.userId,
-      message: data.content.text,
-      timestamp: data.timestamp
-    });
-
-    // 广播聊天消息
-    this.broadcast({
-      type: 'chat',
-      message: {
-        userId: data.userId,
-        text: data.content.text,
-        timestamp: data.timestamp
-      }
-    });
-  }
-
-  // 广播消息给所有连接的客户端
-  private broadcast(message: any, excludeUserId?: string) {
-    const messageStr = JSON.stringify(message);
-
-    this.connections.forEach((connection, userId) => {
-      if (userId !== excludeUserId) {
-        connection.send(messageStr);
-      }
-    });
-  }
-
-  // 加载持久化数据
-  private async loadPersistedData() {
-    try {
-      // 从数据库加载数据
-      const stored = await this.ctx.storage.get('whiteboardState');
-      if (stored) {
-        const state = JSON.parse(stored as string);
-        this.drawingData = state.drawingData || [];
-        this.chatHistory = state.chatHistory || [];
-      }
-    } catch (error) {
-      console.error('Error loading persisted data:', error);
-    }
-  }
-
-  // 保存状态到持久化存储
-  private async persistState() {
-    try {
-      await this.ctx.storage.put('whiteboardState', JSON.stringify({
-        drawingData: this.drawingData,
-        chatHistory: this.chatHistory
-      }));
-    } catch (error) {
-      console.error('Error persisting state:', error);
-    }
-  }
-
-  // 当客户端断开连接时
   onClose(connection: Connection) {
-    // 找到断开连接的用户
-    let disconnectedUserId: string | undefined;
-    this.connections.forEach((conn, userId) => {
-      if (conn === connection) {
-        disconnectedUserId = userId;
-      }
-    });
+    this.connections.delete(connection);
+    // 可以在这里处理用户断开连接的逻辑
+  }
 
-    if (disconnectedUserId) {
-      this.handleLeave(disconnectedUserId);
+  private broadcast(message: string, exclude?: Connection) {
+    for (const connection of this.connections) {
+      if (connection !== exclude) {
+        connection.send(message);
+      }
     }
   }
 }
@@ -220,6 +170,7 @@ export class WhiteboardRoom extends Server<Env> {
 // 导出默认处理程序
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    // 处理 WebSocket 连接
     if (request.headers.get("Upgrade") === "websocket") {
       const pair = new WebSocketPair();
       const [client, server] = Object.values(pair);
@@ -237,6 +188,7 @@ export default {
       });
     }
 
-    return new Response('Expected WebSocket', { status: 426 });
+    // 处理普通 HTTP 请求
+    return env.ASSETS.fetch(request);
   }
 };
