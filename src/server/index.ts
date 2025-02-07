@@ -1,350 +1,222 @@
 // src/server/index.ts
 
-import {
-  type Connection,
-  Server,
-  type WSMessage,
-} from "partyserver";
+import { DurableObjectState } from 'cloudflare:workers';
+import { ChatMessage, UserSession, MessageType, UserRole} from '../shared';
 
-import { ChatMessage, UserRole, UserSession, MessageType } from "../shared";
-
-interface RoomData {
-  users: Map<string, UserSession>;
-  messages: ChatMessage[];
-  drawingData: any[];
+interface Env {
+  ASSETS: any;
+  WhieteboardRealTime: DurableObjectNamespace;
 }
 
+// WebSocket 消息类型
 interface WebSocketMessage {
   type: string;
   content?: any;
-  roomId?: string;
-  userId?: string;
-  userName?: string;
 }
 
-export class Chat extends Server<Env> {
-  static options = {
-    hibernate: true,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+
+export class WhieteboardRealTime {
+  private users: Map<string, UserSession> = new Map();
+  private messages: ChatMessage[] = [];
+  private drawingData: any[] = [];
+  private connections: Set<WebSocket> = new Set();
+  private connectionToUser: Map<WebSocket, string> = new Map();
+
+  constructor(private state: DurableObjectState, private env: Env) {
+    // 如果需要，可以在这里加载持久化的状态
+  }
+
+  async fetch(request: Request): Promise<Response> {
+    if (request.headers.get('Upgrade') !== 'websocket') {
+      return new Response('Expected WebSocket', { status: 426 });
     }
-  };
 
-  private rooms = new Map<string, RoomData>();
-  private connectionToUser = new Map<Connection, string>();
+    const [clientSocket, serverSocket] = Object.values(new WebSocketPair());
+    serverSocket.accept();
+    this.handleWebSocket(serverSocket);
 
-  onStart() {
-    this.ctx.storage.sql.exec(`
-      CREATE TABLE IF NOT EXISTS messages (
-        id TEXT PRIMARY KEY,
-        roomId TEXT,
-        userId TEXT,
-        userName TEXT,
-        content TEXT,
-        messageType TEXT,
-        timestamp INTEGER
-      )
-    `);
+    return new Response(null, { status: 101, webSocket: clientSocket });
   }
 
-  onConnect(connection: Connection) {
-    console.log("New connection established");
+  private handleWebSocket(webSocket: WebSocket) {
+    this.connections.add(webSocket);
+    webSocket.addEventListener('message', (event) => this.onMessage(webSocket, event.data));
+    webSocket.addEventListener('close', () => this.onClose(webSocket));
   }
 
-  private checkConnection(connection: Connection): boolean {
-    if (!connection || !this.connections.has(connection)) {
-      console.error('Invalid connection');
-      return false;
-    }
-    return true;
-  }
-
-  private createRoom(roomId: string): RoomData {
-    const room: RoomData = {
-      users: new Map<string, UserSession>(),
-      messages: [],
-      drawingData: []
-    };
-    this.rooms.set(roomId, room);
-    return room;
-  }
-
-  private getOrCreateRoom(roomId: string): RoomData {
-    return this.rooms.get(roomId) || this.createRoom(roomId);
-  }
-
-  private broadcastToRoom(roomId: string, message: any, exclude?: Connection) {
-    const room = this.rooms.get(roomId);
-    if (!room) return;
-
-    for (const [userId, user] of room.users) {
-      for (const connection of this.connections) {
-        if (connection !== exclude && this.connectionToUser.get(connection) === userId) {
-          connection.send(JSON.stringify(message));
-        }
+  private onClose(webSocket: WebSocket) {
+    const userId = this.connectionToUser.get(webSocket);
+    if (userId) {
+      const user = this.users.get(userId);
+      if (user) {
+        this.users.delete(userId);
+        this.sendSystemMessage(`${user.userName} 离开了房间`);
+        this.broadcastUserList();
       }
+      this.connectionToUser.delete(webSocket);
     }
+    this.connections.delete(webSocket);
   }
 
-  private broadcastUserList(roomId: string) {
-    const room = this.rooms.get(roomId);
-    if (!room) return;
-
-    const userList = Array.from(room.users.values());
-    this.broadcastToRoom(roomId, {
-      type: "userList",
-      content: userList
-    });
-  }
-
-  onMessage(connection: Connection, message: WSMessage) {
-    if (!this.checkConnection(connection)) return;
-
+  private async onMessage(webSocket: WebSocket, messageData: string) {
     try {
-      const data = JSON.parse(message as string) as WebSocketMessage;
+      const data = JSON.parse(messageData) as WebSocketMessage;
       if (!data.type) {
         throw new Error('Missing message type');
       }
 
       switch (data.type) {
-        case 'createRoom':
-          this.handleCreateRoom(connection, data);
-          break;
         case 'join':
-          this.handleJoin(connection, data);
+          this.handleJoin(webSocket, data);
           break;
         case 'chat':
-          this.handleChat(connection, data);
+          this.handleChat(webSocket, data);
           break;
         case 'draw':
-          this.handleDraw(connection, data);
+          this.handleDraw(webSocket, data);
           break;
         case 'clear':
-          this.handleClear(connection, data);
+          this.handleClear(webSocket);
           break;
         default:
           console.warn('Unknown message type:', data.type);
       }
     } catch (error) {
       console.error('Error processing message:', error);
-      connection.send(JSON.stringify({
-        type: 'error',
-        content: 'Invalid message format'
-      }));
+      webSocket.send(JSON.stringify({ type: 'error', content: 'Invalid message format' }));
     }
   }
 
-  private handleCreateRoom(connection: Connection, data: WebSocketMessage) {
-    const { roomId, userId, userName } = data;
-    if (!roomId || !userId || !userName) return;
+  private handleJoin(webSocket: WebSocket, data: WebSocketMessage) {
+    const { userId, userName, role } = data.content;
+    if (!userId || !userName) {
+      webSocket.send(JSON.stringify({ type: 'error', content: 'Missing userId or userName' }));
+      return;
+    }
 
-    const room = this.getOrCreateRoom(roomId);
-    const user: UserSession = {
-      userId,
-      userName,
-      role: UserRole.HOST,
-      roomId
-    };
-
-    room.users.set(userId, user);
-    this.connectionToUser.set(connection, userId);
-
-    connection.send(JSON.stringify({
-      type: "init",
-      content: {
-        messages: room.messages,
-        drawingData: room.drawingData,
-        users: Array.from(room.users.values())
-      }
-    }));
-  }
-
-  private handleJoin(connection: Connection, data: WebSocketMessage) {
-    if (!data.content) return;
-    const { userId, userName, roomId, role } = data.content;
-    if (!roomId || !userId || !userName) return;
-
-    const room = this.getOrCreateRoom(roomId);
-    const user: UserSession = {
+    const userSession: UserSession = {
       userId,
       userName,
       role: role || UserRole.VIEWER,
-      roomId
+      roomId: this.state.id.toString(),
     };
 
-    room.users.set(userId, user);
-    this.connectionToUser.set(connection, userId);
+    this.users.set(userId, userSession);
+    this.connectionToUser.set(webSocket, userId);
 
-    connection.send(JSON.stringify({
-      type: "init",
-      content: {
-        messages: room.messages,
-        drawingData: room.drawingData,
-        users: Array.from(room.users.values())
-      }
-    }));
+    // 发送初始化数据
+    webSocket.send(
+      JSON.stringify({
+        type: 'init',
+        content: {
+          messages: this.messages,
+          drawingData: this.drawingData,
+          users: Array.from(this.users.values()),
+        },
+      })
+    );
 
-    this.sendSystemMessage(roomId, `${userName} 加入了房间`);
-    this.broadcastUserList(roomId);
+    this.sendSystemMessage(`${userName} 加入了房间`);
+    this.broadcastUserList();
   }
 
-  private handleChat(connection: Connection, data: WebSocketMessage) {
-    const userId = this.connectionToUser.get(connection);
-    if (!userId || !data.content) return;
+  private handleChat(webSocket: WebSocket, data: WebSocketMessage) {
+    const userId = this.connectionToUser.get(webSocket);
+    if (!userId) {
+      webSocket.send(JSON.stringify({ type: 'error', content: 'User not joined' }));
+      return;
+    }
 
-    const room = this.findRoomByUserId(userId);
-    if (!room) return;
-
-    const user = room.users.get(userId);
+    const user = this.users.get(userId);
     if (!user) return;
 
     const message: ChatMessage = {
       id: crypto.randomUUID(),
-      userId,
+      userId: user.userId,
       userName: user.userName,
-      content: data.content.text,
+      content: data.content?.content,
       timestamp: Date.now(),
-      messageType: MessageType.TEXT
+      messageType: MessageType.TEXT,
     };
 
-    room.messages.push(message);
-    this.saveMessageToDb(message, user.roomId!);
+    this.messages.push(message);
 
-    this.broadcastToRoom(user.roomId!, {
-      type: "chat",
-      content: message
-    });
+    // 如果需要，将消息保存到存储
+
+    const payload = JSON.stringify({ type: 'chat', content: message });
+    this.broadcast(payload);
   }
 
-  private handleDraw(connection: Connection, data: WebSocketMessage) {
-    const userId = this.connectionToUser.get(connection);
-    if (!userId || !data.content) return;
+  private handleDraw(webSocket: WebSocket, data: WebSocketMessage) {
+    const userId = this.connectionToUser.get(webSocket);
+    if (!userId) {
+      webSocket.send(JSON.stringify({ type: 'error', content: 'User not joined' }));
+      return;
+    }
 
-    const room = this.findRoomByUserId(userId);
-    if (!room) return;
+    this.drawingData.push(data.content);
 
-    const user = room.users.get(userId);
-    if (!user) return;
-
-    room.drawingData.push(data.content);
-    this.broadcastToRoom(user.roomId!, {
-      type: "draw",
-      content: data.content
-    }, connection);
+    const payload = JSON.stringify({ type: 'draw', content: data.content });
+    this.broadcast(payload, webSocket); // 如果需要，可排除发送者
   }
 
-  private handleClear(connection: Connection, data: WebSocketMessage) {
-    const userId = this.connectionToUser.get(connection);
-    if (!userId) return;
-
-    const room = this.findRoomByUserId(userId);
-    if (!room) return;
-
-    const user = room.users.get(userId);
-    if (!user) return;
-
-    room.drawingData = [];
-    this.broadcastToRoom(user.roomId!, {
-      type: "clear"
-    });
+  private handleClear(webSocket: WebSocket) {
+    // 可根据需要检查用户权限
+    this.drawingData = [];
+    const payload = JSON.stringify({ type: 'clear' });
+    this.broadcast(payload);
   }
 
-  private findRoomByUserId(userId: string): RoomData | undefined {
-    for (const [roomId, room] of this.rooms) {
-      if (room.users.has(userId)) {
-        return room;
+  private broadcast(message: string, exclude?: WebSocket) {
+    for (const ws of this.connections) {
+      if (ws !== exclude) {
+        ws.send(message);
       }
     }
-    return undefined;
   }
 
-  private sendSystemMessage(roomId: string, content: string) {
+  private sendSystemMessage(content: string) {
     const message: ChatMessage = {
       id: crypto.randomUUID(),
-      userId: "system",
-      userName: "System",
+      userId: 'system',
+      userName: 'System',
       content,
       timestamp: Date.now(),
-      messageType: MessageType.SYSTEM
+      messageType: MessageType.SYSTEM,
     };
 
-    const room = this.rooms.get(roomId);
-    if (room) {
-      room.messages.push(message);
-      this.saveMessageToDb(message, roomId);
-      this.broadcastToRoom(roomId, {
-        type: "chat",
-        content: message
-      });
-    }
+    this.messages.push(message);
+
+    const payload = JSON.stringify({ type: 'chat', content: message });
+    this.broadcast(payload);
   }
 
-  private saveMessageToDb(message: ChatMessage, roomId: string) {
-    this.ctx.storage.sql.exec(
-      `INSERT INTO messages (id, roomId, userId, userName, content, messageType, timestamp)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [
-        message.id,
-        roomId,
-        message.userId,
-        message.userName,
-        message.content,
-        message.messageType,
-        message.timestamp
-      ]
-    );
-  }
-
-  private cleanupEmptyRooms() {
-    for (const [roomId, room] of this.rooms) {
-      if (room.users.size === 0) {
-        this.rooms.delete(roomId);
-      }
-    }
-  }
-
-  onClose(connection: Connection) {
-    const userId = this.connectionToUser.get(connection);
-    if (userId) {
-      const room = this.findRoomByUserId(userId);
-      if (room) {
-        const user = room.users.get(userId);
-        if (user) {
-          room.users.delete(userId);
-          this.sendSystemMessage(user.roomId!, `${user.userName} 离开了房间`);
-          this.broadcastUserList(user.roomId!);
-        }
-      }
-      this.connectionToUser.delete(connection);
-    }
-    this.connections.delete(connection);
-    this.cleanupEmptyRooms();
-  }
-
-  static async fetch(request: Request, env: Env, ctx: ExecutionContext) {
-    if (request.headers.get("upgrade") === "websocket") {
-      const pair = new WebSocketPair();
-      const [client, server] = Object.values(pair);
-
-      const chat = new Chat();
-      await chat.handleWebSocket(server);
-
-      return new Response(null, {
-        status: 101,
-        webSocket: client,
-        headers: {
-          'Upgrade': 'websocket',
-          'Connection': 'Upgrade'
-        }
-      });
-    }
-
-    return env.ASSETS.fetch(request);
+  private broadcastUserList() {
+    const userList = Array.from(this.users.values());
+    const payload = JSON.stringify({ type: 'userList', content: userList });
+    this.broadcast(payload);
   }
 }
 
 export default {
-  fetch: Chat.fetch
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+
+    if (request.headers.get('Upgrade') === 'websocket') {
+      const roomId = url.searchParams.get('room');
+      if (!roomId) {
+        return new Response('Missing room ID', { status: 400 });
+      }
+
+      // 获取对应的 Durable Object 实例
+      const objectId = env.WhieteboardRealTime.idFromName(roomId);
+      const stub = env.WhieteboardRealTime.get(objectId);
+
+      // 将请求转发给 Durable Object
+      return stub.fetch(request);
+    }
+
+    // 其他请求，例如静态资源
+    return env.ASSETS.fetch(request);
+  },
 };

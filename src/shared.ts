@@ -32,36 +32,3 @@ export interface ChatMessage {
   messageType: MessageType;
 }
 
-// WebSocket 消息类型
-export type WSMessage =
-  | {
-      type: "createRoom";
-      roomId: string;
-      userId: string;
-      userName: string;
-    }
-  | {
-      type: "join";
-      content: {
-        userId: string;
-        userName: string;
-        roomId: string;
-        role: UserRole;
-      };
-    }
-  | {
-      type: "chat";
-      content: ChatMessage;
-    }
-  | {
-      type: "userList";
-      content: UserSession[];
-    }
-  | {
-      type: "draw";
-      content: any; // 绘画数据类型
-    }
-  | {
-      type: "clear";
-    };
-
