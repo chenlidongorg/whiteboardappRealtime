@@ -206,9 +206,11 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
+     return new Response('test', { status: 200 });
+
     if (request.headers.get('Upgrade') === 'websocket') {
       const roomId = url.searchParams.get('room');
-      if (roomId) {
+      if (!roomId) {
         return new Response('Missing room ID', { status: 400 });
       }
 
