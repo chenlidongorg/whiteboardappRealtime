@@ -6,9 +6,14 @@ import {
   type WSMessage,
 } from "partyserver";
 
-import type { ChatMessage, Message } from "../shared";
+import { ChatMessage, UserRole, UserSession, MessageType } from "../shared";
 
-// 导出 Chat 类 (之前的主要功能都保留)
+interface RoomData {
+  users: Map<string, UserSession>;
+  messages: ChatMessage[];
+  drawingData: any[];
+}
+
 export class Chat extends Server<Env> {
   static options = {
     hibernate: true,
@@ -19,70 +24,68 @@ export class Chat extends Server<Env> {
     }
   };
 
-  connections = new Set<Connection>();
-  messages = [] as ChatMessage[];
-  drawingData: any[] = []; // 存储绘画数据
-  participants = new Map<string, string>(); // userId -> userName
+  // 存储所有房间数据
+  private rooms = new Map<string, RoomData>();
+
+  // 存储连接到用户的映射
+  private connectionToUser = new Map<Connection, string>();
 
   onStart() {
     // 初始化数据库
-    this.ctx.storage.sql.exec(
-      `CREATE TABLE IF NOT EXISTS messages (
+    this.ctx.storage.sql.exec(`
+      CREATE TABLE IF NOT EXISTS messages (
         id TEXT PRIMARY KEY,
-        user TEXT,
-        role TEXT,
+        roomId TEXT,
+        userId TEXT,
+        userName TEXT,
         content TEXT,
+        messageType TEXT,
         timestamp INTEGER
-      )`
-    );
-
-    // 加载历史消息
-    this.messages = this.ctx.storage.sql
-      .exec(`SELECT * FROM messages ORDER BY timestamp DESC LIMIT 100`)
-      .toArray() as ChatMessage[];
+      )
+    `);
   }
 
   onConnect(connection: Connection) {
-    this.connections.add(connection);
-
-    // 发送当前状态给新连接的客户端
-    connection.send(JSON.stringify({
-      type: "init",
-      data: {
-        messages: this.messages,
-        drawingData: this.drawingData,
-        participants: Array.from(this.participants.entries())
-      }
-    }));
+    // 等待加入房间的消息
+    console.log("New connection established");
   }
 
-  // 保存消息到数据库
-  saveMessage(message: ChatMessage) {
-    const existingMessage = this.messages.find((m) => m.id === message.id);
-    if (existingMessage) {
-      this.messages = this.messages.map((m) =>
-        m.id === message.id ? message : m
-      );
-    } else {
-      this.messages.push(message);
-    }
+  private createRoom(roomId: string): RoomData {
+    const room: RoomData = {
+      users: new Map<string, UserSession>(),
+      messages: [],
+      drawingData: []
+    };
+    this.rooms.set(roomId, room);
+    return room;
+  }
 
-    // 保存到数据库
-    this.ctx.storage.sql.exec(
-      `INSERT INTO messages (id, user, role, content, timestamp)
-       VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT (id) DO UPDATE SET
-       content = ?, timestamp = ?`,
-      [
-        message.id,
-        message.user,
-        message.role,
-        JSON.stringify(message.content),
-        Date.now(),
-        JSON.stringify(message.content),
-        Date.now()
-      ]
-    );
+  private getOrCreateRoom(roomId: string): RoomData {
+    return this.rooms.get(roomId) || this.createRoom(roomId);
+  }
+
+  private broadcastToRoom(roomId: string, message: any, exclude?: Connection) {
+    const room = this.rooms.get(roomId);
+    if (!room) return;
+
+    for (const [userId, user] of room.users) {
+      for (const connection of this.connections) {
+        if (connection !== exclude && this.connectionToUser.get(connection) === userId) {
+          connection.send(JSON.stringify(message));
+        }
+      }
+    }
+  }
+
+  private broadcastUserList(roomId: string) {
+    const room = this.rooms.get(roomId);
+    if (!room) return;
+
+    const userList = Array.from(room.users.values());
+    this.broadcastToRoom(roomId, {
+      type: "userList",
+      content: userList
+    });
   }
 
   onMessage(connection: Connection, message: WSMessage) {
@@ -90,87 +93,214 @@ export class Chat extends Server<Env> {
       const data = JSON.parse(message as string);
 
       switch (data.type) {
+        case 'createRoom':
+          this.handleCreateRoom(connection, data);
+          break;
+
         case 'join':
           this.handleJoin(connection, data);
           break;
 
-        case 'draw':
-          this.handleDraw(data);
+        case 'chat':
+          this.handleChat(connection, data);
           break;
 
-        case 'chat':
-          this.handleChat(data);
+        case 'draw':
+          this.handleDraw(connection, data);
           break;
 
         case 'clear':
-          this.handleClear();
-          break;
-
-        case 'add':
-        case 'update':
-          this.saveMessage(data);
+          this.handleClear(connection, data);
           break;
       }
-
-      // 广播消息给其他客户端
-      this.broadcast(message as string, connection);
-
     } catch (error) {
       console.error('Error processing message:', error);
     }
   }
 
-  private handleJoin(connection: Connection, data: any) {
-    const { userId, userName } = data.content;
-    this.participants.set(userId, userName);
+  private handleCreateRoom(connection: Connection, data: any) {
+    const { roomId, userId, userName } = data;
+    const room = this.getOrCreateRoom(roomId);
 
-    // 广播新用户加入
-    this.broadcast(JSON.stringify({
-      type: 'userJoined',
-      content: { userId, userName }
+    const user: UserSession = {
+      userId,
+      userName,
+      role: UserRole.HOST,
+      roomId
+    };
+
+    room.users.set(userId, user);
+    this.connectionToUser.set(connection, userId);
+
+    // 发送房间初始状态
+    connection.send(JSON.stringify({
+      type: "init",
+      content: {
+        messages: room.messages,
+        drawingData: room.drawingData,
+        users: Array.from(room.users.values())
+      }
     }));
   }
 
-  private handleDraw(data: any) {
-    this.drawingData.push(data.content);
-  }
+  private handleJoin(connection: Connection, data: any) {
+    const { userId, userName, roomId, role } = data.content;
+    const room = this.getOrCreateRoom(roomId);
 
-  private handleChat(data: any) {
-    const chatMessage = {
-      id: crypto.randomUUID(),
-      user: data.userId,
-      role: 'user',
-      content: data.content.text,
-      timestamp: Date.now()
+    const user: UserSession = {
+      userId,
+      userName,
+      role,
+      roomId
     };
 
-    this.saveMessage(chatMessage);
+    room.users.set(userId, user);
+    this.connectionToUser.set(connection, userId);
+
+    // 发送房间初始状态
+    connection.send(JSON.stringify({
+      type: "init",
+      content: {
+        messages: room.messages,
+        drawingData: room.drawingData,
+        users: Array.from(room.users.values())
+      }
+    }));
+
+    // 广播系统消息
+    this.sendSystemMessage(roomId, `${userName} 加入了房间`);
+
+    // 广播用户列表更新
+    this.broadcastUserList(roomId);
   }
 
-  private handleClear() {
-    this.drawingData = [];
-    // 广播清除命令
-    this.broadcast(JSON.stringify({ type: 'clear' }));
+  private handleChat(connection: Connection, data: any) {
+    const userId = this.connectionToUser.get(connection);
+    if (!userId) return;
+
+    const room = this.findRoomByUserId(userId);
+    if (!room) return;
+
+    const user = room.users.get(userId);
+    if (!user) return;
+
+    const message: ChatMessage = {
+      id: crypto.randomUUID(),
+      userId,
+      userName: user.userName,
+      content: data.content.text,
+      timestamp: Date.now(),
+      messageType: MessageType.TEXT
+    };
+
+    room.messages.push(message);
+    this.saveMessageToDb(message, user.roomId!);
+
+    this.broadcastToRoom(user.roomId!, {
+      type: "chat",
+      content: message
+    });
+  }
+
+  private handleDraw(connection: Connection, data: any) {
+    const userId = this.connectionToUser.get(connection);
+    if (!userId) return;
+
+    const room = this.findRoomByUserId(userId);
+    if (!room) return;
+
+    const user = room.users.get(userId);
+    if (!user) return;
+
+    room.drawingData.push(data.content);
+    this.broadcastToRoom(user.roomId!, {
+      type: "draw",
+      content: data.content
+    }, connection);
+  }
+
+  private handleClear(connection: Connection, data: any) {
+    const userId = this.connectionToUser.get(connection);
+    if (!userId) return;
+
+    const room = this.findRoomByUserId(userId);
+    if (!room) return;
+
+    const user = room.users.get(userId);
+    if (!user) return;
+
+    room.drawingData = [];
+    this.broadcastToRoom(user.roomId!, {
+      type: "clear"
+    });
+  }
+
+  private findRoomByUserId(userId: string): RoomData | undefined {
+    for (const [roomId, room] of this.rooms) {
+      if (room.users.has(userId)) {
+        return room;
+      }
+    }
+    return undefined;
+  }
+
+  private sendSystemMessage(roomId: string, content: string) {
+    const message: ChatMessage = {
+      id: crypto.randomUUID(),
+      userId: "system",
+      userName: "System",
+      content,
+      timestamp: Date.now(),
+      messageType: MessageType.SYSTEM
+    };
+
+    const room = this.rooms.get(roomId);
+    if (room) {
+      room.messages.push(message);
+      this.saveMessageToDb(message, roomId);
+      this.broadcastToRoom(roomId, {
+        type: "chat",
+        content: message
+      });
+    }
+  }
+
+  private saveMessageToDb(message: ChatMessage, roomId: string) {
+    this.ctx.storage.sql.exec(
+      `INSERT INTO messages (id, roomId, userId, userName, content, messageType, timestamp)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        message.id,
+        roomId,
+        message.userId,
+        message.userName,
+        message.content,
+        message.messageType,
+        message.timestamp
+      ]
+    );
   }
 
   onClose(connection: Connection) {
-    this.connections.delete(connection);
-    // 可以在这里处理用户断开连接的逻辑
-  }
-
-  private broadcast(message: string, exclude?: Connection) {
-    for (const connection of this.connections) {
-      if (connection !== exclude) {
-        connection.send(message);
+    const userId = this.connectionToUser.get(connection);
+    if (userId) {
+      const room = this.findRoomByUserId(userId);
+      if (room) {
+        const user = room.users.get(userId);
+        if (user) {
+          room.users.delete(userId);
+          this.sendSystemMessage(user.roomId!, `${user.userName} 离开了房间`);
+          this.broadcastUserList(user.roomId!);
+        }
       }
+      this.connectionToUser.delete(connection);
     }
+    this.connections.delete(connection);
   }
 }
 
-// 导出默认处理程序
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
-    // 处理 WebSocket 连接
     if (request.headers.get("Upgrade") === "websocket") {
       const pair = new WebSocketPair();
       const [client, server] = Object.values(pair);
@@ -188,7 +318,6 @@ export default {
       });
     }
 
-    // 处理普通 HTTP 请求
     return env.ASSETS.fetch(request);
   }
 };

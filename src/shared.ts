@@ -1,55 +1,66 @@
-export type ChatMessage = {
+// src/shared.ts
+
+// 用户角色
+export enum UserRole {
+  HOST = "host",
+  EDITOR = "editor",
+  VIEWER = "viewer"
+}
+
+// 用户会话
+export interface UserSession {
+  userId: string;
+  userName: string;
+  role?: UserRole;
+  roomId?: string;
+}
+
+// 消息类型
+export enum MessageType {
+  TEXT = "text",
+  SYSTEM = "system",
+  FILE = "file"
+}
+
+// 聊天消息
+export interface ChatMessage {
   id: string;
+  userId: string;
+  userName: string;
   content: string;
-  user: string;
-  role: "user" | "assistant";
-};
+  timestamp: number;
+  messageType: MessageType;
+}
 
-export type Message =
+// WebSocket 消息类型
+export type WSMessage =
   | {
-      type: "add";
-      id: string;
-      content: string;
-      user: string;
-      role: "user" | "assistant";
+      type: "createRoom";
+      roomId: string;
+      userId: string;
+      userName: string;
     }
   | {
-      type: "update";
-      id: string;
-      content: string;
-      user: string;
-      role: "user" | "assistant";
+      type: "join";
+      content: {
+        userId: string;
+        userName: string;
+        roomId: string;
+        role: UserRole;
+      };
     }
   | {
-      type: "all";
-      messages: ChatMessage[];
+      type: "chat";
+      content: ChatMessage;
+    }
+  | {
+      type: "userList";
+      content: UserSession[];
+    }
+  | {
+      type: "draw";
+      content: any; // 绘画数据类型
+    }
+  | {
+      type: "clear";
     };
-
-export const names = [
-  "Alice",
-  "Bob",
-  "Charlie",
-  "David",
-  "Eve",
-  "Frank",
-  "Grace",
-  "Heidi",
-  "Ivan",
-  "Judy",
-  "Kevin",
-  "Linda",
-  "Mallory",
-  "Nancy",
-  "Oscar",
-  "Peggy",
-  "Quentin",
-  "Randy",
-  "Steve",
-  "Trent",
-  "Ursula",
-  "Victor",
-  "Walter",
-  "Xavier",
-  "Yvonne",
-  "Zoe",
-];
