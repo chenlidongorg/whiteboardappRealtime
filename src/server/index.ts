@@ -15,7 +15,7 @@ interface WebSocketMessage {
 }
 
 
-export class Chat {
+export class Chat extends DurableObject {
   private users: Map<string, UserSession> = new Map();
   private messages: ChatMessage[] = [];
   private drawingData: any[] = [];
@@ -205,8 +205,6 @@ export class Chat {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-
-     return new Response('test', { status: 200 });
 
     if (request.headers.get('Upgrade') === 'websocket') {
       const roomId = url.searchParams.get('room');
