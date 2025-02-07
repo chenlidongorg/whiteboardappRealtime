@@ -298,63 +298,62 @@ export class Chat extends Server<Env> {
     this.connections.delete(connection);
   }
 }
+// src/server/index.ts 中的 fetch 函数修改
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
-    // 添加 CORS 预检请求处理
+    // 添加详细的 CORS 和 WebSocket 握手处理
     if (request.method === "OPTIONS") {
       return new Response(null, {
+        status: 204,
         headers: {
           "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Upgrade, Connection, Sec-WebSocket-Key, Sec-WebSocket-Version",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Upgrade, Connection, Sec-WebSocket-Key, Sec-WebSocket-Version, Sec-WebSocket-Extensions",
           "Access-Control-Max-Age": "86400",
         }
       });
     }
 
-    // 处理 WebSocket 连接
+    // WebSocket 连接处理
     if (request.headers.get("Upgrade")?.toLowerCase() === "websocket") {
-      // 验证必要的 WebSocket 头部
-      const upgradeHeader = request.headers.get("Upgrade")?.toLowerCase();
-      const connectionHeader = request.headers.get("Connection")?.toLowerCase();
-      const webSocketKey = request.headers.get("Sec-WebSocket-Key");
-      const webSocketVersion = request.headers.get("Sec-WebSocket-Version");
+      try {
+        // 验证 WebSocket 握手必需的头部
+        const upgradeHeader = request.headers.get("Upgrade");
+        const connectionHeader = request.headers.get("Connection");
+        const secWebSocketKey = request.headers.get("Sec-WebSocket-Key");
+        const secWebSocketVersion = request.headers.get("Sec-WebSocket-Version");
 
-      if (!upgradeHeader || !connectionHeader?.includes("upgrade") || !webSocketKey || webSocketVersion !== "13") {
-        return new Response("Invalid WebSocket request", { status: 400 });
-      }
-
-      const pair = new WebSocketPair();
-      const [client, server] = Object.values(pair);
-
-      server.accept();
-
-      return new Response(null, {
-        status: 101,
-        webSocket: client,
-        headers: {
-          "Upgrade": "websocket",
-          "Connection": "Upgrade",
-          "Sec-WebSocket-Accept": computeAcceptKey(webSocketKey),
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Headers": "*",
-          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        if (!upgradeHeader || !connectionHeader || !secWebSocketKey || secWebSocketVersion !== "13") {
+          return new Response("Invalid WebSocket handshake", { status: 400 });
         }
-      });
+
+        // 创建 WebSocket 对
+        const pair = new WebSocketPair();
+        const [client, server] = Object.values(pair);
+
+        // 配置服务器端 WebSocket
+        server.accept();
+        const chat = new Chat();
+        chat.handleWebSocket(server);
+
+        // 返回正确的握手响应
+        return new Response(null, {
+          status: 101,
+          webSocket: client,
+          headers: {
+            "Upgrade": "websocket",
+            "Connection": "Upgrade",
+            "Sec-WebSocket-Accept": computeAcceptKey(secWebSocketKey),
+            "Access-Control-Allow-Origin": "*",
+          }
+        });
+      } catch (err) {
+        console.error("WebSocket handshake error:", err);
+        return new Response("WebSocket handshake failed", { status: 500 });
+      }
     }
 
-    // 处理普通 HTTP 请求
     return env.ASSETS.fetch(request);
   }
 };
-
-// 计算 WebSocket Accept Key
-function computeAcceptKey(key: string): string {
-  const GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-  const acceptKey = key + GUID;
-
-  // 在 Cloudflare Workers 中使用 sha1 和 base64
-  const sha1 = crypto.subtle.digestSync("SHA-1", new TextEncoder().encode(acceptKey));
-  return btoa(String.fromCharCode(...new Uint8Array(sha1)));
-}
