@@ -2,6 +2,7 @@
   "compatibility_date": "2024-11-01",
   "main": "src/server/index.ts",
   "name": "whiteboardrealtime",
+  "websocket":true,
   "migrations": [
     {
       "new_sqlite_classes": ["Chat"],
@@ -28,12 +29,7 @@
   "observability": {
     "enabled": true
   },
-  "upload_source_maps": true,
-  "wrangler": {
-    "config": {
-      "websocket": {
-        "enabled": true
-      }
-    }
-  }
+  "upload_source_maps": true
+
+
 }

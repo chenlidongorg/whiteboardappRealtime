@@ -302,74 +302,28 @@ export class Chat extends Server<Env> {
 // src/server/index.ts
 
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext) {
-    // 添加允许的源
-    const allowedOrigins = ['*']; // 生产环境应该限制具体域名
-    const origin = request.headers.get('Origin') || '*';
+     async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+       const upgradeHeader = request.headers.get('Upgrade');
 
-    // CORS预检请求处理
-    if (request.method === 'OPTIONS') {
-      return new Response(null, {
-        status: 204,
-        headers: {
-          'Access-Control-Allow-Origin': origin,
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Upgrade, Connection, Sec-WebSocket-Key, Sec-WebSocket-Version, Sec-WebSocket-Extensions',
-          'Access-Control-Max-Age': '86400',
-          'Access-Control-Allow-Credentials': 'true',
-        }
-      });
-    }
+       // 检查是否为 WebSocket 升级请求
+       if (upgradeHeader && upgradeHeader.toLowerCase() === 'websocket') {
+         const [client, server] = Object.values(new WebSocketPair());
 
-    // WebSocket升级请求处理
-    if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
-      try {
-        const secWebSocketKey = request.headers.get('Sec-WebSocket-Key');
-        const secWebSocketVersion = request.headers.get('Sec-WebSocket-Version');
+         // 接受服务器端的 WebSocket 连接
+         server.accept();
 
-        if (!secWebSocketKey || secWebSocketVersion !== '13') {
-          return new Response('Invalid WebSocket request', { status: 400 });
-        }
+         // 处理 WebSocket 连接
+         const chat = new Chat();
+         chat.handleWebSocket(server);
 
-        // 创建WebSocket对
-        const pair = new WebSocketPair();
-        const [client, server] = Object.values(pair);
+         // 返回响应，不需要手动设置头部
+         return new Response(null, {
+           status: 101,
+           webSocket: client,
+         });
+       }
 
-        // 设置服务器端WebSocket
-        server.accept();
-        const chat = new Chat();
-        chat.handleWebSocket(server);
-
-        // 返回握手响应
-        return new Response(null, {
-          status: 101,
-          webSocket: client,
-          headers: {
-            'Upgrade': 'websocket',
-            'Connection': 'Upgrade',
-            'Sec-WebSocket-Accept': computeAcceptKey(secWebSocketKey),
-            'Access-Control-Allow-Origin': origin,
-            'Access-Control-Allow-Credentials': 'true'
-          }
-        });
-      } catch (err) {
-        console.error('WebSocket handshake error:', err);
-        return new Response('WebSocket handshake failed', { status: 500 });
-      }
-    }
-
-    // 静态资源请求
-    return env.ASSETS.fetch(request);
-  }
-};
-
-// 计算WebSocket Accept Key
-async function computeAcceptKey(secWebSocketKey: string): Promise<string> {
-     const encoder = new TextEncoder();
-     const data = encoder.encode(secWebSocketKey + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11');
-     const hashBuffer = await crypto.subtle.digest('SHA-1', data);
-     const hashArray = Array.from(new Uint8Array(hashBuffer));
-     const hashBase64 = btoa(String.fromCharCode(...hashArray));
-
-     return hashBase64;
-   }
+       // 处理其他请求，例如静态资源
+       return env.ASSETS.fetch(request);
+     }
+   };
