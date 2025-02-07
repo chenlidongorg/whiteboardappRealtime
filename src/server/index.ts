@@ -301,7 +301,30 @@ export class Chat extends Server<Env> {
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
-    if (request.headers.get("Upgrade") === "websocket") {
+    // 添加 CORS 预检请求处理
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Upgrade, Connection, Sec-WebSocket-Key, Sec-WebSocket-Version",
+          "Access-Control-Max-Age": "86400",
+        }
+      });
+    }
+
+    // 处理 WebSocket 连接
+    if (request.headers.get("Upgrade")?.toLowerCase() === "websocket") {
+      // 验证必要的 WebSocket 头部
+      const upgradeHeader = request.headers.get("Upgrade")?.toLowerCase();
+      const connectionHeader = request.headers.get("Connection")?.toLowerCase();
+      const webSocketKey = request.headers.get("Sec-WebSocket-Key");
+      const webSocketVersion = request.headers.get("Sec-WebSocket-Version");
+
+      if (!upgradeHeader || !connectionHeader?.includes("upgrade") || !webSocketKey || webSocketVersion !== "13") {
+        return new Response("Invalid WebSocket request", { status: 400 });
+      }
+
       const pair = new WebSocketPair();
       const [client, server] = Object.values(pair);
 
@@ -311,13 +334,27 @@ export default {
         status: 101,
         webSocket: client,
         headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          "Upgrade": "websocket",
+          "Connection": "Upgrade",
+          "Sec-WebSocket-Accept": computeAcceptKey(webSocketKey),
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "*",
+          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
         }
       });
     }
 
+    // 处理普通 HTTP 请求
     return env.ASSETS.fetch(request);
   }
 };
+
+// 计算 WebSocket Accept Key
+function computeAcceptKey(key: string): string {
+  const GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+  const acceptKey = key + GUID;
+
+  // 在 Cloudflare Workers 中使用 sha1 和 base64
+  const sha1 = crypto.subtle.digestSync("SHA-1", new TextEncoder().encode(acceptKey));
+  return btoa(String.fromCharCode(...new Uint8Array(sha1)));
+}
