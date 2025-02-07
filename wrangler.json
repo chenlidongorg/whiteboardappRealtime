@@ -29,13 +29,6 @@
     "enabled": true
   },
   "upload_source_maps": true,
-  "workers_dev": true,
-  "routes": [
-    {
-      "pattern": "*",
-      "zone_name": "realtime.endlessai.org"
-    }
-  ],
   "wrangler": {
     "config": {
       "websocket": {
