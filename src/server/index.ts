@@ -26,17 +26,7 @@ export class Chat {
     // 如果需要，可以在这里加载持久化的状态
   }
 
-  async fetch(request: Request): Promise<Response> {
-    if (request.headers.get('Upgrade') !== 'websocket') {
-      return new Response('Expected WebSocket', { status: 426 });
-    }
 
-    const [clientSocket, serverSocket] = Object.values(new WebSocketPair());
-    serverSocket.accept();
-    this.handleWebSocket(serverSocket);
-
-    return new Response(null, { status: 101, webSocket: clientSocket });
-  }
 
   private handleWebSocket(webSocket: WebSocket) {
     this.connections.add(webSocket);
@@ -196,6 +186,20 @@ export class Chat {
     const payload = JSON.stringify({ type: 'userList', content: userList });
     this.broadcast(payload);
   }
+
+
+   async fetch(request: Request): Promise<Response> {
+      if (request.headers.get('Upgrade') !== 'websocket') {
+        return new Response('Expected WebSocket', { status: 426 });
+      }
+
+      const [clientSocket, serverSocket] = Object.values(new WebSocketPair());
+      serverSocket.accept();
+      this.handleWebSocket(serverSocket);
+
+      return new Response(null, { status: 101, webSocket: clientSocket });
+    }
+
 }
 
 export default {
@@ -204,7 +208,7 @@ export default {
 
     if (request.headers.get('Upgrade') === 'websocket') {
       const roomId = url.searchParams.get('room');
-      if (!roomId) {
+      if (roomId) {
         return new Response('Missing room ID', { status: 400 });
       }
 
