@@ -1,5 +1,4 @@
 // src/server/index.ts
-
 import { Server, Connection } from "partyserver";
 
 // 定义消息类型
