@@ -5,8 +5,8 @@
   "migrations": [
     {
       "new_sqlite_classes": ["Chat"],
-      "tag": "v1",
-      "new_classes": ["WhiteboardRoom"]
+      "tag": "v1"
+
     }
   ],
   "assets": {
