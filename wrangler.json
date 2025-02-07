@@ -1,31 +1,35 @@
 {
-  "name": "whiteboardrealtime",
+  "compatibility_date": "2024-11-01",
   "main": "src/server/index.ts",
-  "compatibility_date": "2023-10-01",
-  "workers_dev": true,
-  "durable_objects": {
-    "bindings": [
-      {
-        "name": "WhieteboardRealTime",
-        "class_name": "WhieteboardRealTime"
-      }
-    ]
-  },
+  "name": "whiteboardrealtime",
+  "websocket":true,
   "migrations": [
     {
-      "tag": "v1",
-      "new_classes": ["WhieteboardRealTime"]
+      "new_sqlite_classes": ["WhieteboardRealTime"],
+      "new_classes": ["WhieteboardRealTime"],
+      "tag": "v1"
     }
   ],
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
-    "not_found": "dist/index.html"
+    "not_found_handling": "single-page-application"
   },
   "build": {
     "command": "esbuild src/client/index.ts --bundle --splitting --format=esm --platform=browser --outdir=public/dist"
   },
-  "websocket": true,
-  "upload_format": "service-worker",
-  "compatibility_flags": ["streams_enable_constructors", "nodejs_compat"]
+  "durable_objects": {
+    "bindings": [
+      {
+        "class_name": "WhieteboardRealTime",
+        "name": "WhieteboardRealTime"
+      }
+    ]
+  },
+  "observability": {
+    "enabled": true
+  },
+  "upload_source_maps": true
+
+
 }
