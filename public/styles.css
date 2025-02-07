@@ -1,51 +1,106 @@
-body,
-html {
-  height: 100%;
+* {
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
+  box-sizing: border-box;
 }
 
-.chat {
-  padding-top: 40px;
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  line-height: 1.6;
+  color: #333;
 }
 
-#root {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  overflow-y: auto;
-  height: 100%;
-  /* padding: 10px; */
+.landing-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
 }
 
-.message {
+header {
+  text-align: center;
+  padding: 40px 0;
+}
+
+header h1 {
+  font-size: 2.5rem;
+  color: #2c3e50;
+}
+
+.hero {
+  text-align: center;
+  padding: 60px 0;
+}
+
+.hero h2 {
+  font-size: 2rem;
+  margin-bottom: 20px;
+  color: #2c3e50;
+}
+
+.hero p {
+  font-size: 1.2rem;
+  color: #666;
+  margin-bottom: 40px;
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 30px;
+  margin: 40px 0;
+}
+
+.feature {
+  padding: 20px;
+  text-align: center;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.feature h3 {
+  color: #2c3e50;
   margin-bottom: 10px;
 }
 
-.message .user {
+.download {
+  text-align: center;
+  padding: 60px 0;
+}
+
+.app-store-button {
+  display: inline-block;
+  background: #007AFF;
+  color: white;
+  padding: 15px 30px;
+  border-radius: 25px;
+  text-decoration: none;
   font-weight: bold;
-  text-align: right;
+  margin-top: 20px;
+  transition: background 0.3s ease;
 }
 
-.message .remove {
-  position: absolute;
-  width: 22px;
-  height: 20px;
-  left: -60px;
-  /* display: "block", */
-  display: none;
-  padding: 0;
-  line-height: 18px;
-  border: "none";
+.app-store-button:hover {
+  background: #0056b3;
 }
 
-.send-message {
-  padding: 0;
+footer {
+  text-align: center;
+  padding: 20px 0;
+  color: #666;
+  border-top: 1px solid #eee;
 }
 
-.my-input-text::placeholder {
-  color: #ccc;
+@media (max-width: 768px) {
+  .features {
+    grid-template-columns: 1fr;
+  }
+  
+  header h1 {
+    font-size: 2rem;
+  }
+  
+  .hero h2 {
+    font-size: 1.5rem;
+  }
 }
