@@ -18,7 +18,7 @@ interface WebSocketMessage {
 export class Chat {
   private users: Map<string, UserSession> = new Map();
   private messages: ChatMessage[] = [];
-  private fileName: String = ""; //初始化文件名
+  private fileName: String = "";
   private drawingData: any[] = [];
   private connections: Set<WebSocket> = new Set();
   private connectionToUser: Map<WebSocket, string> = new Map();
@@ -26,7 +26,7 @@ export class Chat {
   constructor(private state: DurableObjectState, private env: Env) {
     // 如果需要，可以在这里加载持久化的状态
 
-    super(state, env);
+    //super(state, env);
     //this.currentlyConnectedWebSockets = 0;
 
   }
