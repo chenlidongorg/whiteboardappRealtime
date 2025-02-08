@@ -18,12 +18,17 @@ interface WebSocketMessage {
 export class Chat {
   private users: Map<string, UserSession> = new Map();
   private messages: ChatMessage[] = [];
+  private fileName: String = ""; //初始化文件名
   private drawingData: any[] = [];
   private connections: Set<WebSocket> = new Set();
   private connectionToUser: Map<WebSocket, string> = new Map();
 
   constructor(private state: DurableObjectState, private env: Env) {
     // 如果需要，可以在这里加载持久化的状态
+
+    super(state, env);
+    //this.currentlyConnectedWebSockets = 0;
+
   }
 
 
@@ -56,6 +61,8 @@ export class Chat {
       }
 
       switch (data.type) {
+      case 'create':
+          this.handleCreate(webSocket, data);
         case 'join':
           this.handleJoin(webSocket, data);
           break;
@@ -76,6 +83,15 @@ export class Chat {
       webSocket.send(JSON.stringify({ type: 'error', content: 'Invalid message format' }));
     }
   }
+
+
+private handleCreate(webSocket: WebSocket, data: WebSocketMessage) {
+ const { fileName } = data.content;
+
+ this.fileName = fileName;
+
+}
+
 
   private handleJoin(webSocket: WebSocket, data: WebSocketMessage) {
     const { userId, userName, role } = data.content;
@@ -108,6 +124,7 @@ export class Chat {
 
     this.sendSystemMessage(`${userName} 加入了房间`);
     this.broadcastUserList();
+    this.broadcastFileName();
   }
 
   private handleChat(webSocket: WebSocket, data: WebSocketMessage) {
@@ -187,6 +204,18 @@ export class Chat {
     this.broadcast(payload);
   }
 
+private broadcastFileName() {
+
+    if (!this.fileName){
+
+    return;
+
+    }
+
+    const payload = JSON.stringify({ type: 'download', content: this.fileName });
+    this.broadcast(payload);
+
+  }
 
    async fetch(request: Request): Promise<Response> {
       if (request.headers.get('Upgrade') !== 'websocket') {
