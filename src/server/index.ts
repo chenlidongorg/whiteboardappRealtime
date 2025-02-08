@@ -124,8 +124,32 @@ private handleCreate(webSocket: WebSocket, data: WebSocketMessage) {
 
     this.sendSystemMessage(`${userName} 加入了房间`);
     this.broadcastUserList();
-    this.broadcastFileName();
+    this.broadcastFileName(userId, userName);
   }
+
+
+private broadcastFileName(userId,userName) {
+
+    if (!this.fileName){
+
+    return;
+
+    }
+
+const message: ChatMessage = {
+      id: crypto.randomUUID(),
+      userId: userId,
+      userName: userName,
+      content: this.fileName,
+      timestamp: Date.now(),
+      messageType: MessageType.TEXT,
+    };
+
+    const payload = JSON.stringify({ type: 'download', content: message });
+    this.broadcast(payload);
+
+  }
+
 
   private handleChat(webSocket: WebSocket, data: WebSocketMessage) {
     const userId = this.connectionToUser.get(webSocket);
@@ -204,18 +228,6 @@ private handleCreate(webSocket: WebSocket, data: WebSocketMessage) {
     this.broadcast(payload);
   }
 
-private broadcastFileName() {
-
-    if (!this.fileName){
-
-    return;
-
-    }
-
-    const payload = JSON.stringify({ type: 'download', content: this.fileName });
-    this.broadcast(payload);
-
-  }
 
    async fetch(request: Request): Promise<Response> {
       if (request.headers.get('Upgrade') !== 'websocket') {
