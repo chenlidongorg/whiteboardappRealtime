@@ -122,19 +122,15 @@ private handleCreate(webSocket: WebSocket, data: WebSocketMessage) {
       })
     );
 
+    this.broadcastFileName(userId, userName);
     this.sendSystemMessage(`${userName} 加入了房间`);
     this.broadcastUserList();
-    this.broadcastFileName(userId, userName);
+
   }
 
 
 private broadcastFileName(userId,userName) {
 
-    if (!this.fileName){
-
-    return;
-
-    }
 
 const message: ChatMessage = {
       id: crypto.randomUUID(),
