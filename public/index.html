@@ -1,14 +1,26 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Whiteboard Realtime - 实时协作白板</title>
+  <title>Whiteboard Realtime</title>
   <link rel="stylesheet" href="/styles.css">
-  <meta name="description" content="多人实时协作白板应用，支持iOS设备">
+  <meta name="description" content="A real-time collaborative whiteboard app, compatible with iOS devices.">
 </head>
 <body>
+<!-- 添加语言选择器 -->
+<select id="language-selector">
+  <option value="en">English</option>
+  <option value="zh">中文</option>
+  <option value="ja">日本語</option>
+  <option value="ar">العربية</option>
+</select>
+
 <div id="root"></div>
+
+<!-- 确保先加载i18next库 -->
+<script src="https://cdn.jsdelivr.net/npm/i18next@21.6.10/dist/umd/i18next.min.js"></script>
+<!-- 然后加载你的脚本 -->
 <script src="/dist/index.js"></script>
 </body>
 </html>
