@@ -31,8 +31,6 @@ document.getElementById('language-selector').addEventListener('change', (event) 
 
 
 
-
-
 // 将渲染逻辑抽取为单独的函数
 function renderPage() {
   const root = document.getElementById('root');
@@ -42,14 +40,10 @@ function renderPage() {
         <header>
           <img src="https://files.whiteboardapp.org/id490633790.png" alt="Logo" class="logo">
           <h1>${i18n.t('title')}</h1>
+          <p>${i18n.t('description')}</p>
         </header>
 
         <main>
-          <section class="hero">
-            <h2>${i18n.t('hero_title')}</h2>
-            <p>${i18n.t('description')}</p>
-          </section>
-
           <section class="features">
             <div class="feature">
               <h3>${i18n.t('real_time_feature')}</h3>
