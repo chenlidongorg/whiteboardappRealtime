@@ -8,14 +8,28 @@ document.addEventListener('DOMContentLoaded', () => {
    });
 
    document.getElementById('language-selector').addEventListener('change', (event) => {
+
+
+
+
      const language = event.target.value;
      console.log(`Language changed to: ${language}`);
      localStorage.setItem('preferred-language', language); // 保存语言选择
      i18n.changeLanguage(language).then(() => {
        console.log('Language changed');
+
+
+       const languageSelector = document.getElementById('language-selector');
+
+               if (languageSelector) {
+                 languageSelector.value = savedLanguage; // 同步选择框
+               }
+               
+
        renderPage(); // 重新渲染页面而不是刷新
      });
    });
+
 
 
 
