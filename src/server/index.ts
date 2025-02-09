@@ -87,12 +87,8 @@ export class Chat {
   }
 
 //注册用户
+private loginUserSession(webSocket: WebSocket, userId: string, userName: string, role: string): UserSession | null {
 
-
-// 处理文件名保存，以及初始化信息发起人信息
-  private handleCreate(webSocket: WebSocket, data: WebSocketMessage) {
-
-    const { userId, userName, role, fileName } = data.content;
       if (!userId || !userName) {
         webSocket.send(JSON.stringify({ type: 'error', content: 'Missing userId or userName' }));
         return null;
@@ -108,6 +104,21 @@ export class Chat {
       this.users.set(userId, userSession);
       this.connectionToUser.set(webSocket, userId);
 
+      return userSession;
+     }
+
+
+
+
+
+// 处理文件名保存，以及初始化信息发起人信息
+  private handleCreate(webSocket: WebSocket, data: WebSocketMessage) {
+
+    const { userId, userName, role, fileName } = data.content;
+
+
+      const userSession = this.loginUserSession(userId, userName, role);
+       if (!userSession) return;
 
     if (fileName) {
       this.fileName = fileName; // 存储文件名
@@ -122,20 +133,9 @@ export class Chat {
 
   private handleJoin(webSocket: WebSocket, data: WebSocketMessage) {
     const { userId, userName, role } = data.content;
-      if (!userId || !userName) {
-        webSocket.send(JSON.stringify({ type: 'error', content: 'Missing userId or userName' }));
-        return null;
-      }
 
-      const userSession: UserSession = {
-        userId,
-        userName,
-        role: role || UserRole.VIEWER,
-        roomId: this.state.id.toString(),
-      };
-
-      this.users.set(userId, userSession);
-      this.connectionToUser.set(webSocket, userId);
+      const userSession = this.loginUserSession(userId, userName, role);
+             if (!userSession) return;
 
     // 发送初始化数据 发送到哪里？
     webSocket.send(
