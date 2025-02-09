@@ -21,7 +21,7 @@
     "bindings": [
       {
         "class_name": "Chat",
-        "name": "WhieteboardRealTime"
+        "name": "WhiteboardRealTime"
       }
     ]
   },
