@@ -34,8 +34,6 @@
     "check": "tsc --project src/client && tsc --project src/server && wrangler --experimental-json-config deploy --dry-run",
     "deploy": "wrangler --experimental-json-config deploy",
     "dev": "wrangler --experimental-json-config dev",
-    "types": "wrangler --experimental-json-config types ./src/server/worker-configuration.d.ts",
-    "build": "webpack --mode production",
-    "dev": "webpack --mode development --watch"
+    "types": "wrangler --experimental-json-config types ./src/server/worker-configuration.d.ts"
   }
 }
