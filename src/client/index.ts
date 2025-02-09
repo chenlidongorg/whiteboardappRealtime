@@ -1,15 +1,6 @@
 // src/client/index.ts
 import './i18n'; // 确保 i18n 配置已被加载
  import i18n from './i18n';
-
-  document.getElementById('language-selector').addEventListener('change', (event) => {
-     const language = event.target.value;
-     i18n.changeLanguage(language).then(() => {
-       // 重新渲染或刷新页面
-       location.reload();
-     });
-   });
-
    document.addEventListener('DOMContentLoaded', () => {
      const root = document.getElementById('root');
      if (root) {
@@ -51,3 +42,11 @@ import './i18n'; // 确保 i18n 配置已被加载
        `;
      }
    });
+
+   document.getElementById('language-selector').addEventListener('change', (event) => {
+        const language = event.target.value;
+        i18n.changeLanguage(language).then(() => {
+          // 重新渲染或刷新页面
+          location.reload();
+        });
+      });
