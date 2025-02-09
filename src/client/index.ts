@@ -2,13 +2,23 @@
 import './i18n'; // 确保 i18n 配置已被加载
 import i18n from './i18n';
 
-document.getElementById('language-selector').addEventListener('change', (event) => {
-  const language = event.target.value;
-  localStorage.setItem('preferred-language', language); // 保存语言选择
-  i18n.changeLanguage(language).then(() => {
-    renderPage(); // 重新渲染页面而不是刷新
-  });
-});
+document.addEventListener('DOMContentLoaded', () => {
+     console.log('DOM fully loaded and parsed');
+     renderPage(); // 在页面加载后进行初次渲染
+   });
+
+   document.getElementById('language-selector').addEventListener('change', (event) => {
+     const language = event.target.value;
+     console.log(`Language changed to: ${language}`);
+     localStorage.setItem('preferred-language', language); // 保存语言选择
+     i18n.changeLanguage(language).then(() => {
+       console.log('Language changed');
+       renderPage(); // 重新渲染页面而不是刷新
+     });
+   });
+
+
+
 
 // 将渲染逻辑抽取为单独的函数
 function renderPage() {
@@ -55,5 +65,7 @@ function renderPage() {
         </footer>
       </div>
     `;
-  }
+  } else {
+          console.error('Root element not found');
+        }
 }
