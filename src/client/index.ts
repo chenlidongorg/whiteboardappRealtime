@@ -1,38 +1,33 @@
 // src/client/index.ts
-import './i18n'; // 确保 i18n 配置已被加载
+import './i18n';
 import i18n from './i18n';
 
 document.addEventListener('DOMContentLoaded', () => {
-     console.log('DOM fully loaded and parsed');
-     renderPage(); // 在页面加载后进行初次渲染
-   });
+  console.log('DOM fully loaded and parsed');
 
-   document.getElementById('language-selector').addEventListener('change', (event) => {
+  // 获取i18n当前语言
+  const currentLanguage = i18n.language || 'en'; // 如果i18n还未初始化则默认'en'
 
+  // 设置选择框的当前语言
+  const languageSelector = document.getElementById('language-selector') as HTMLSelectElement;
+  if (languageSelector) {
+    languageSelector.value = currentLanguage;
+  }
 
-localStorage.removeItem('preferred-language');
+  renderPage(); // 在页面加载后进行初次渲染
+});
 
-     const language = event.target.value;
+document.getElementById('language-selector').addEventListener('change', (event) => {
+  const language = (event.target as HTMLSelectElement).value;
 
-     localStorage.setItem('preferred-language', language); // 保存语言选择
+  // 保存语言选择
+  localStorage.setItem('preferred-language', language);
 
-
-     const languageSelector = document.getElementById('language-selector');
-
-          if (languageSelector) {
-            languageSelector.value = language; // 同步选择框
-          }
-
-
-
-     i18n.changeLanguage(language).then(() => {
-
-
-
-
-       renderPage(); // 重新渲染页面而不是刷新
-     });
-   });
+  // 切换i18n的语言
+  i18n.changeLanguage(language).then(() => {
+    renderPage(); // 重新渲染页面而不是刷新
+  });
+});
 
 
 
