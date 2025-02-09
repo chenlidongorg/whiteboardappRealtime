@@ -16,9 +16,10 @@ interface WebSocketMessage {
 
 
 export class Chat {
+// 新增一个字段来存储文件名
+  private fileName: string | null = null;
   private users: Map<string, UserSession> = new Map();
   private messages: ChatMessage[] = [];
-  private fileName: String = "";
   private drawingData: any[] = [];
   private connections: Set<WebSocket> = new Set();
   private connectionToUser: Map<WebSocket, string> = new Map();
@@ -61,8 +62,9 @@ export class Chat {
       }
 
       switch (data.type) {
-      case 'create':
-          this.handleCreate(webSocket, data);
+        case 'create':
+        this.handleCreate(webSocket, data);
+        break;
         case 'join':
           this.handleJoin(webSocket, data);
           break;
@@ -85,12 +87,14 @@ export class Chat {
   }
 
 
-private handleCreate(webSocket: WebSocket, data: WebSocketMessage) {
- const { fileName } = data.content;
+// 处理文件名保存，以及初始化信息发起人信息
+  private handleCreate(webSocket: WebSocket, data: WebSocketMessage) {
+    const { fileName } = data.content;
+    if (fileName) {
+      this.fileName = fileName; // 存储文件名
+    }
+  }
 
- this.fileName = fileName;
-
-}
 
 
   private handleJoin(webSocket: WebSocket, data: WebSocketMessage) {
@@ -107,10 +111,10 @@ private handleCreate(webSocket: WebSocket, data: WebSocketMessage) {
       roomId: this.state.id.toString(),
     };
 
-    this.users.set(userId, userSession);
+    this.users.set(userId, userSession); //这个生存期内会永久保存吗？
     this.connectionToUser.set(webSocket, userId);
 
-    // 发送初始化数据
+    // 发送初始化数据 发送到哪里？
     webSocket.send(
       JSON.stringify({
         type: 'init',
@@ -118,31 +122,13 @@ private handleCreate(webSocket: WebSocket, data: WebSocketMessage) {
           messages: this.messages,
           drawingData: this.drawingData,
           users: Array.from(this.users.values()),
+          fileName: this.fileName, // 将文件名到添加初始化数据中
         },
       })
     );
 
-    this.broadcastFileName(userId, userName);
     this.sendSystemMessage(`${userName} 加入了房间`);
     this.broadcastUserList();
-
-  }
-
-
-private broadcastFileName(userId,userName) {
-
-
-const message: ChatMessage = {
-      id: crypto.randomUUID(),
-      userId: userId,
-      userName: userName,
-      content: this.fileName,
-      timestamp: Date.now(),
-      messageType: MessageType.TEXT,
-    };
-
-    const payload = JSON.stringify({ type: 'download', content: message });
-    this.broadcast(payload);
 
   }
 
