@@ -87,7 +87,7 @@ export class Chat {
   }
 
 //注册用户
-private loginUserSession(webSocket: WebSocket, userId: string, userName: string, role: string): UserSession | null {
+    private loginUserSession(webSocket: WebSocket, userId: string, userName: string, role: string): UserSession | null {
 
       if (!userId || !userName) {
         webSocket.send(JSON.stringify({ type: 'error', content: 'Missing userId or userName' }));
@@ -116,8 +116,7 @@ private loginUserSession(webSocket: WebSocket, userId: string, userName: string,
 
     const { userId, userName, role, fileName } = data.content;
 
-
-      const userSession = this.loginUserSession(userId, userName, role);
+    const userSession = this.loginUserSession(webSocket, userId, userName, role);
        if (!userSession) return;
 
     if (fileName) {
@@ -132,9 +131,10 @@ private loginUserSession(webSocket: WebSocket, userId: string, userName: string,
 
 
   private handleJoin(webSocket: WebSocket, data: WebSocketMessage) {
+
     const { userId, userName, role } = data.content;
 
-      const userSession = this.loginUserSession(userId, userName, role);
+    const userSession = this.loginUserSession(webSocket, userId, userName, role);
              if (!userSession) return;
 
     // 发送初始化数据 发送到哪里？
