@@ -1,52 +1,56 @@
-// src/client/index.ts
-import './i18n'; // 确保 i18n 配置已被加载
- import i18n from './i18n';
-   document.addEventListener('DOMContentLoaded', () => {
-     const root = document.getElementById('root');
-     if (root) {
-       root.innerHTML = `
-         <div class="landing-page">
-           <header>
-             <h1>${i18n.t('title')}</h1>
-           </header>
+// index.ts
+document.getElementById('language-selector').addEventListener('change', (event) => {
+  const language = event.target.value;
+  localStorage.setItem('preferred-language', language); // 保存语言选择
+  i18n.changeLanguage(language).then(() => {
+    renderPage(); // 重新渲染页面而不是刷新
+  });
+});
 
-           <main>
-             <section class="hero">
-               <h2>${i18n.t('hero_title')}</h2>
-               <p>${i18n.t('description')}</p>
+// 将渲染逻辑抽取为单独的函数
+function renderPage() {
+  const root = document.getElementById('root');
+  if (root) {
+    root.innerHTML = `
+      <div class="landing-page">
+        <header>
+          <img src="https://files.whiteboardapp.org/id490633790.png" alt="Logo" class="logo">
+          <h1>${i18n.t('title')}</h1>
+        </header>
 
-               <div class="features">
-                 <div class="feature">
-                   <h3>${i18n.t('real_time_feature')}</h3>
-                   <p>${i18n.t('chat_feature')}</p>
-                 </div>
-                 <div class="feature">
-                   <h3>${i18n.t('secure_feature')}</h3>
-                   <p>${i18n.t('secure_feature')}</p>
-                 </div>
-               </div>
-             </section>
+        <main>
+          <section class="hero">
+            <h2>${i18n.t('hero_title')}</h2>
+            <p>${i18n.t('description')}</p>
+          </section>
 
-             <section class="download">
-               <h2>${i18n.t('download_now')}</h2>
-               <a href="#" class="app-store-button">
-                 ${i18n.t('download_now')}
-               </a>
-             </section>
-           </main>
+          <section class="features">
+            <div class="feature">
+              <h3>${i18n.t('real_time_feature')}</h3>
+              <p>${i18n.t('chat_feature')}</p>
+            </div>
+            <div class="feature">
+              <h3>${i18n.t('secure_feature')}</h3>
+              <p>${i18n.t('secure_feature')}</p>
+            </div>
+          </section>
 
-           <footer>
-             <p>${i18n.t('footer')}</p>
-           </footer>
-         </div>
-       `;
-     }
-   });
+          <section class="download">
+            <h2>${i18n.t('download_now')}</h2>
+            <div class="download-content">
+              <img src="https://files.whiteboardapp.org/whiteboard_installapp.png" alt="QR Code" class="qr-code">
+              <a href="https://apps.apple.com/app/id496465537" class="app-store-button" target="_blank">
+                ${i18n.t('download_now')}
+              </a>
+            </div>
+          </section>
+        </main>
 
-   document.getElementById('language-selector').addEventListener('change', (event) => {
-        const language = event.target.value;
-        i18n.changeLanguage(language).then(() => {
-          // 重新渲染或刷新页面
-          location.reload();
-        });
-      });
+        <footer>
+          <p>${i18n.t('footer')}</p>
+          <p><a href="https://endlessai.org" target="_blank">More Information</a></p>
+        </footer>
+      </div>
+    `;
+  }
+}

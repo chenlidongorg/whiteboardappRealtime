@@ -1,7 +1,10 @@
 import i18n from 'i18next';
 
+// 获取保存的语言设置或使用默认语言
+const savedLanguage = localStorage.getItem('preferred-language') || 'en';
+
    i18n.init({
-     lng: 'en', // 默认语言
+     lng: savedLanguage, // 使用保存的语言
      resources: {
        en: {
          translation: {
