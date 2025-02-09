@@ -18,13 +18,13 @@ document.addEventListener('DOMContentLoaded', () => {
      i18n.changeLanguage(language).then(() => {
        console.log('Language changed');
 
+const savedLanguage = localStorage.getItem('preferred-language') || 'en';
+     const languageSelector = document.getElementById('language-selector');
 
-       const languageSelector = document.getElementById('language-selector');
+     if (languageSelector) {
+       languageSelector.value = savedLanguage; // 同步选择框
+     }
 
-               if (languageSelector) {
-                 languageSelector.value = savedLanguage; // 同步选择框
-               }
-               
 
        renderPage(); // 重新渲染页面而不是刷新
      });
