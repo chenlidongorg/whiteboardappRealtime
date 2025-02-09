@@ -87,43 +87,55 @@ export class Chat {
   }
 
 //注册用户
-private processUserSession(webSocket: WebSocket, data: WebSocketMessage){ //: UserSession | null {
-  const { userId, userName, role } = data.content;
-  if (!userId || !userName) {
-    webSocket.send(JSON.stringify({ type: 'error', content: 'Missing userId or userName' }));
-    return null;
-  }
 
-  const userSession: UserSession = {
-    userId,
-    userName,
-    role: role || UserRole.VIEWER,
-    roomId: this.state.id.toString(),
-  };
-
-  this.users.set(userId, userSession);
-  this.connectionToUser.set(webSocket, userId);
-
-  //return userSession;
-
-}
 
 // 处理文件名保存，以及初始化信息发起人信息
   private handleCreate(webSocket: WebSocket, data: WebSocketMessage) {
 
-    this.processUserSession(webSocket, data);
+    const { userId, userName, role, fileName } = data.content;
+      if (!userId || !userName) {
+        webSocket.send(JSON.stringify({ type: 'error', content: 'Missing userId or userName' }));
+        return null;
+      }
 
-    const { fileName } = data.content;
+      const userSession: UserSession = {
+        userId,
+        userName,
+        role: role || UserRole.VIEWER,
+        roomId: this.state.id.toString(),
+      };
+
+      this.users.set(userId, userSession);
+      this.connectionToUser.set(webSocket, userId);
+
+
     if (fileName) {
       this.fileName = fileName; // 存储文件名
     }
+
+    this.sendSystemMessage(`${userName} 加入了房间`);
+    this.broadcastUserList();
 
   }
 
 
 
   private handleJoin(webSocket: WebSocket, data: WebSocketMessage) {
-    this.processUserSession(webSocket, data);
+    const { userId, userName, role } = data.content;
+      if (!userId || !userName) {
+        webSocket.send(JSON.stringify({ type: 'error', content: 'Missing userId or userName' }));
+        return null;
+      }
+
+      const userSession: UserSession = {
+        userId,
+        userName,
+        role: role || UserRole.VIEWER,
+        roomId: this.state.id.toString(),
+      };
+
+      this.users.set(userId, userSession);
+      this.connectionToUser.set(webSocket, userId);
 
     // 发送初始化数据 发送到哪里？
     webSocket.send(
