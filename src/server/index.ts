@@ -44,8 +44,23 @@ export class Chat {
         this.broadcastUserList(); // 广播用户列表
       }
       this.connectionToUser.delete(webSocket);
+
     }
     this.connections.delete(webSocket);
+
+    // 检查是否没有连接用户
+        if (this.connections.size === 0) {
+          // 清理持久化数据
+          this.state.storage.deleteAll()
+            .then(() => {
+              console.log('Cleared background data as last user left.');
+            })
+            .catch(error => {
+              console.error('Failed to clear data:', error);
+            });
+        }
+
+
   }
 
   // 处理 WebSocket 收到的消息
@@ -58,6 +73,12 @@ export class Chat {
 
       // 根据消息类型处理不同操作
       switch (data.type) {
+
+
+
+
+
+
         case 'create': // 创建房间
           this.handleCreate(webSocket, data);
           break;
@@ -67,6 +88,15 @@ export class Chat {
         case 'chat': // 处理聊天消息
           this.handleChat(webSocket, data);
           break;
+
+
+          // 在服务器的 onMessage 方法中处理背景更新消息
+          case 'updateBackground':
+              this.handleUpdateBackground(webSocket, data);
+              break;
+
+
+
         case 'draw': // 处理绘图数据
           this.handleDraw(webSocket, data);
           break;
@@ -166,6 +196,31 @@ export class Chat {
     const payload = JSON.stringify({ type: 'chat', content: message });
     this.broadcast(payload); // 广播消息
   }
+
+
+
+// 处理背景更新的具体实现
+private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
+    if (data.content) {
+        // 将背景数据持久化，比如保存在 Durable Object 的 state 中
+        this.state.storage.put('background', data.content);
+
+        const payload = JSON.stringify({ type: 'updateBackground', content: data.content });
+        this.broadcast(payload); // 广播消息
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
   // 处理绘图数据
   private handleDraw(webSocket: WebSocket, data: WebSocketMessage) {
