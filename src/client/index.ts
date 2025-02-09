@@ -1,4 +1,7 @@
-// index.ts
+// src/client/index.ts
+import './i18n'; // 确保 i18n 配置已被加载
+import i18n from './i18n';
+
 document.getElementById('language-selector').addEventListener('change', (event) => {
   const language = event.target.value;
   localStorage.setItem('preferred-language', language); // 保存语言选择
