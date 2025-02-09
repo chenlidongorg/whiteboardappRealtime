@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
    document.getElementById('language-selector').addEventListener('change', (event) => {
 
 
-
+localStorage.removeItem('preferred-language');
 
      const language = event.target.value;
 
