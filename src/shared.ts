@@ -8,13 +8,13 @@ export enum UserRole {
 }
 
 export enum RealTimeCommand{
-                case create = "create",
-                case join = "join",
-                case initSetup = "initSetup",
-                case clear = "clear",
-                case userList = "userList",
-                case chat = "chat",
-                case updateBackground = "updateBackground"
+                create = "create",
+                join = "join",
+                initSetup = "initSetup",
+                clear = "clear",
+                userList = "userList",
+                chat = "chat",
+                updateBackground = "updateBackground"
             }
 
 // 用户会话
