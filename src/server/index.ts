@@ -94,7 +94,7 @@ export class Chat {
           break;
 
         case RealTimeCommand.join: //加入房间
-          this.handleJoin(webSocket, data);
+          await this.handleJoin(webSocket, data);
           break;
 
         case RealTimeCommand.chat: //处理聊天消息
@@ -165,7 +165,7 @@ export class Chat {
   }
 
   // 处理加入房间逻辑
-  private handleJoin(webSocket: WebSocket, data: WebSocketMessage) {
+  private await handleJoin(webSocket: WebSocket, data: WebSocketMessage) {
     const { userId, userName, role } = data.content;
     const userSession = this.loginUserSession(webSocket, userId, userName, role);
     if (!userSession) return;
