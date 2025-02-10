@@ -7,6 +7,16 @@ export enum UserRole {
   VIEWER = "viewer"
 }
 
+export enum RealTimeCommand:String{
+                case create = "create",
+                case join = "join",
+                case initSetup = "initSetup",
+                case clear = "clear",
+                case userList = "userList",
+                case chat = "chat",
+                case updateBackground = "updateBackground"
+            }
+
 // 用户会话
 export interface UserSession {
   userId: string;

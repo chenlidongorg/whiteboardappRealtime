@@ -1,5 +1,5 @@
 import { DurableObjectState } from 'cloudflare:workers';
-import { ChatMessage, UserSession, MessageType, UserRole } from '../shared';
+import { ChatMessage, UserSession, MessageType, UserRole, RealTimeCommand } from '../shared';
 
 // 定义环境变量接口
 interface Env {
@@ -40,7 +40,7 @@ export class Chat {
       const user = this.users.get(userId);
       if (user) {
         this.users.delete(userId);
-        this.sendSystemMessage(`${user.userName} 离开了房间`);
+        this.sendSystemMessage(`${user.userName}XXXleave_room`);
         this.broadcastUserList(); // 广播用户列表
       }
       this.connectionToUser.delete(webSocket);
@@ -75,32 +75,22 @@ export class Chat {
       switch (data.type) {
 
 
-
-
-
-
-        case 'create': // 创建房间
+        case RealTimeCommand.create: // 创建房间
           this.handleCreate(webSocket, data);
           break;
-        case 'join': // 加入房间
+        case RealTimeCommand.join: // 加入房间
           this.handleJoin(webSocket, data);
           break;
-        case 'chat': // 处理聊天消息
+        case RealTimeCommand.chat: // 处理聊天消息
           this.handleChat(webSocket, data);
           break;
 
-
           // 在服务器的 onMessage 方法中处理背景更新消息
-          case 'updateBackground':
+          case RealTimeCommand.updateBackground:
               this.handleUpdateBackground(webSocket, data);
               break;
 
-
-
-        case 'draw': // 处理绘图数据
-          this.handleDraw(webSocket, data);
-          break;
-        case 'clear': // 清空绘图数据
+        case RealTimeCommand.clear: // 清空绘图数据
           this.handleClear(webSocket);
           break;
         default:
@@ -142,7 +132,7 @@ export class Chat {
       this.fileName = fileName; // 存储文件名
     }
 
-    this.sendSystemMessage(`${userName} 加入了房间`);
+    this.sendSystemMessage(`${userName}XXXjoined_room`);
     this.broadcastUserList(); // 广播用户列表
   }
 
@@ -155,7 +145,7 @@ export class Chat {
     // 发送初始化数据给加入的用户
     webSocket.send(
       JSON.stringify({
-        type: 'init',
+        type: RealTimeCommand.initSetup,
         content: {
           messages: this.messages,
           drawingData: this.drawingData,
@@ -165,7 +155,7 @@ export class Chat {
       })
     );
 
-    this.sendSystemMessage(`${userName} 加入了房间`);
+    this.sendSystemMessage(`${userName}XXXjoined_room`);
     this.broadcastUserList();
   }
 
@@ -193,7 +183,7 @@ export class Chat {
 
     // 如果需要，可以将此消息持久化保存
 
-    const payload = JSON.stringify({ type: 'chat', content: message });
+    const payload = JSON.stringify({ type: RealTimeCommand.chat, content: message });
     this.broadcast(payload); // 广播消息
   }
 
@@ -203,9 +193,9 @@ export class Chat {
 private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
     if (data.content) {
         // 将背景数据持久化，比如保存在 Durable Object 的 state 中
-        this.state.storage.put('background', data.content);
+        this.state.storage.put(RealTimeCommand.updateBackground, data.content);
 
-        const payload = JSON.stringify({ type: 'updateBackground', content: data.content });
+        const payload = JSON.stringify({ type: RealTimeCommand.updateBackground, content: data.content });
         this.broadcast(payload); // 广播消息
     }
 }
@@ -213,34 +203,11 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
 
 
 
-
-
-
-
-
-
-
-
-
-  // 处理绘图数据
-  private handleDraw(webSocket: WebSocket, data: WebSocketMessage) {
-    const userId = this.connectionToUser.get(webSocket);
-    if (!userId) {
-      webSocket.send(JSON.stringify({ type: 'error', content: 'User not joined' }));
-      return;
-    }
-
-    this.drawingData.push(data.content);
-
-    const payload = JSON.stringify({ type: 'draw', content: data.content });
-    this.broadcast(payload, webSocket); // 如果需要，可排除发送者
-  }
-
   // 清空绘图
   private handleClear(webSocket: WebSocket) {
     // 可根据需要检查用户权限
     this.drawingData = [];
-    const payload = JSON.stringify({ type: 'clear' });
+    const payload = JSON.stringify({ type: RealTimeCommand.clear });
     this.broadcast(payload); // 广播清除消息
   }
 
@@ -266,14 +233,14 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
 
     this.messages.push(message);
 
-    const payload = JSON.stringify({ type: 'chat', content: message });
+    const payload = JSON.stringify({ type: RealTimeCommand.chat, content: message });
     this.broadcast(payload); // 广播系统消息
   }
 
   // 广播用户列表
   private broadcastUserList() {
     const userList = Array.from(this.users.values());
-    const payload = JSON.stringify({ type: 'userList', content: userList });
+    const payload = JSON.stringify({ type: RealTimeCommand.userList, content: userList });
     this.broadcast(payload); // 广播用户列表
   }
 
