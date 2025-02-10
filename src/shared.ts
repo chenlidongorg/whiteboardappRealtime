@@ -7,7 +7,7 @@ export enum UserRole {
   VIEWER = "viewer"
 }
 
-export enum RealTimeCommand:String{
+export enum RealTimeCommand{
                 case create = "create",
                 case join = "join",
                 case initSetup = "initSetup",
