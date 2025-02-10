@@ -26,7 +26,6 @@ export class Chat {
   private fileName: string | null = null; // 存储文件名
   private users: Map<string, UserSession> = new Map(); // 用户列表
   private messages: ChatMessage[] = []; // 聊天记录
-  private drawingData: any[] = []; // 绘图数据
   private connections: Set<WebSocket> = new Set(); // 连接集合
   private connectionToUser: Map<WebSocket, string> = new Map(); // WebSocket 到用户的映射
 
@@ -166,33 +165,51 @@ export class Chat {
 
   // 处理加入房间逻辑
   private async handleJoin(webSocket: WebSocket, data: WebSocketMessage) {
-    const { userId, userName, role } = data.content;
-    const userSession = this.loginUserSession(webSocket, userId, userName, role);
-    if (!userSession) return;
+      const { userId, userName, role } = data.content;
+      const userSession = this.loginUserSession(webSocket, userId, userName, role);
+      if (!userSession) return;
 
-
-    // 获取元数据
-     const moveModels = await this.state.storage.list(PrefixType.moveView);
-     const bgModel = await this.state.storage.get(RealTimeCommand.updateBackground);
-
-
-    // 发送初始化数据给加入的用户
-    webSocket.send(
-      JSON.stringify({
-        type: RealTimeCommand.initSetup,
-        content: {
+      // 初始化数据对象
+      let initData: any = {
           messages: this.messages,
-          drawingData: this.drawingData,
           users: Array.from(this.users.values()),
-          fileName: this.fileName, // 包含文件名
-          bgModel:bgModel,
-          moveModels: moveModels
-        },
-      })
-    );
+          fileName: this.fileName
+      };
 
-    this.sendSystemMessage(`${userName}XXXjoined_room`);
-    this.broadcastUserList();
+      // 安全地获取和添加 moveModels
+      try {
+          const moveModels = await this.state.storage.list(PrefixType.moveView);
+          if (moveModels) {
+              initData.moveModels = moveModels;
+          }
+      } catch (error) {
+          console.error('Error fetching moveModels:', error);
+          // 如果获取失败,设置为空数组
+          initData.moveModels = [];
+      }
+
+      // 安全地获取和添加 bgModel
+      try {
+          const bgModel = await this.state.storage.get(RealTimeCommand.updateBackground);
+          if (bgModel) {
+              initData.bgModel = bgModel;
+          }
+      } catch (error) {
+          console.error('Error fetching bgModel:', error);
+          // 如果获取失败,设置为null或适当的默认值
+          initData.bgModel = null;
+      }
+
+      // 发送初始化数据给加入的用户
+      webSocket.send(
+          JSON.stringify({
+              type: RealTimeCommand.initSetup,
+              content: initData
+          })
+      );
+
+      this.sendSystemMessage(`${userName}XXXjoined_room`);
+      this.broadcastUserList();
   }
 
   // 处理聊天消息
@@ -284,7 +301,7 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
   // 清空绘图
   private handleClear(webSocket: WebSocket) {
     // 可根据需要检查用户权限
-    this.drawingData = [];
+
     const payload = JSON.stringify({ type: RealTimeCommand.clear });
     this.broadcast(payload); // 广播清除消息
   }
