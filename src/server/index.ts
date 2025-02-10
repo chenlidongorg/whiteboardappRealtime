@@ -165,7 +165,7 @@ export class Chat {
   }
 
   // 处理加入房间逻辑
-  private await handleJoin(webSocket: WebSocket, data: WebSocketMessage) {
+  private async handleJoin(webSocket: WebSocket, data: WebSocketMessage) {
     const { userId, userName, role } = data.content;
     const userSession = this.loginUserSession(webSocket, userId, userName, role);
     if (!userSession) return;
