@@ -172,7 +172,7 @@ export class Chat {
 
 
     // 获取元数据
-     const moveModels = await this.state.storage.list({ PrefixType.moveView });
+     const moveModels = await this.state.storage.list(PrefixType.moveView);
      const bgModel = await this.state.storage.get(RealTimeCommand.updateBackground);
 
 
