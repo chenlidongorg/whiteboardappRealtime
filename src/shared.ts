@@ -7,15 +7,25 @@ export enum UserRole {
   VIEWER = "viewer"
 }
 
+export enum PrefixType {
+  moveView = "moveview_",
+
+}
+
 export enum RealTimeCommand{
-                create = "create",
-                join = "join",
-                initSetup = "initSetup",
-                clear = "clear",
-                userList = "userList",
-                chat = "chat",
-                updateBackground = "updateBackground"
+            create = "create",
+            join = "join",
+            initSetup = "initSetup",
+            clear = "clear",
+            userList = "userList",
+            chat = "chat",
+            updateBackground = "updateBackground",
+            updateMoveView = "updateMoveView",
+            deleteMoveView = "deleteMoveView"
             }
+
+
+
 
 // 用户会话
 export interface UserSession {

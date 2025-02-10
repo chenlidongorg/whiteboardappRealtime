@@ -1,5 +1,5 @@
 import { DurableObjectState } from 'cloudflare:workers';
-import { ChatMessage, UserSession, MessageType, UserRole, RealTimeCommand } from '../shared';
+import { ChatMessage, UserSession, MessageType, UserRole, RealTimeCommand, PrefixType } from '../shared';
 
 // 定义环境变量接口
 interface Env {
@@ -12,6 +12,14 @@ interface WebSocketMessage {
   type: string; // 消息类型
   content?: any; // 消息内容（可选）
 }
+
+// 定义移动层元数据接口
+interface MoveViewMetadata {
+    id: string;
+    model: string;     // 移动层基本信息
+    timestamp: number; // 用于追踪更新时间
+}
+
 
 // Chat类定义
 export class Chat {
@@ -55,6 +63,7 @@ export class Chat {
             .then(() => {
               console.log('Cleared background data as last user left.');
             })
+
             .catch(error => {
               console.error('Failed to clear data:', error);
             });
@@ -63,42 +72,61 @@ export class Chat {
 
   }
 
+
   // 处理 WebSocket 收到的消息
   private async onMessage(webSocket: WebSocket, messageData: string) {
+
     try {
+
       const data = JSON.parse(messageData) as WebSocketMessage;
+
       if (!data.type) {
+
         throw new Error('Missing message type'); // 缺失消息类型
+
       }
 
       // 根据消息类型处理不同操作
       switch (data.type) {
 
-
-        case RealTimeCommand.create: // 创建房间
+        case RealTimeCommand.create: //创建房间
           this.handleCreate(webSocket, data);
           break;
-        case RealTimeCommand.join: // 加入房间
+
+        case RealTimeCommand.join: //加入房间
           this.handleJoin(webSocket, data);
           break;
-        case RealTimeCommand.chat: // 处理聊天消息
+
+        case RealTimeCommand.chat: //处理聊天消息
           this.handleChat(webSocket, data);
           break;
 
-          // 在服务器的 onMessage 方法中处理背景更新消息
-          case RealTimeCommand.updateBackground:
-              this.handleUpdateBackground(webSocket, data);
-              break;
+        case RealTimeCommand.updateBackground:
+          this.handleUpdateBackground(webSocket, data);
+          break;
 
-        case RealTimeCommand.clear: // 清空绘图数据
+        case RealTimeCommand.updateMoveView: // 处理移动层更新
+          this.handleUpdateMoveView(webSocket, data);
+          break;
+
+        case RealTimeCommand.deleteMoveView: // 处理移动层更新
+          this.handleDeleteMoveView(webSocket, data);
+          break;
+
+        case RealTimeCommand.clear: //清空绘图数据
           this.handleClear(webSocket);
           break;
+
         default:
-          console.warn('Unknown message type:', data.type); // 未知的消息类型
+          console.warn('Unknown message type:', data.type); //未知的消息类型
+
       }
+
     } catch (error) {
+
       console.error('Error processing message:', error); // 处理消息错误
       webSocket.send(JSON.stringify({ type: 'error', content: 'Invalid message format' })); // 无效的消息格式
+
     }
   }
 
@@ -142,6 +170,12 @@ export class Chat {
     const userSession = this.loginUserSession(webSocket, userId, userName, role);
     if (!userSession) return;
 
+
+    // 获取元数据
+     const moveModels = await this.state.storage.list({ PrefixType.moveView });
+     const bgModel = await this.state.storage.get(RealTimeCommand.updateBackground);
+
+
     // 发送初始化数据给加入的用户
     webSocket.send(
       JSON.stringify({
@@ -151,6 +185,8 @@ export class Chat {
           drawingData: this.drawingData,
           users: Array.from(this.users.values()),
           fileName: this.fileName, // 包含文件名
+          bgModel:bgModel,
+          moveModels: moveModels
         },
       })
     );
@@ -201,6 +237,48 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
 }
 
 
+// 处理移动层更新
+    private async handleUpdateMoveView(webSocket: WebSocket, data: WebSocketMessage) {
+        if (data.content) {
+            const { id, model } = data.content;
+
+            // 准备元数据
+            const metadata: MoveViewMetadata = {
+                id,
+                model,
+                timestamp: Date.now()
+            };
+
+
+            // 保存元数据到storage
+            const storageKey = `${PrefixType.moveView}${id}`;
+            await this.state.storage.put(storageKey, metadata);
+
+            // 广播更新消息给所有连接的客户端
+            this.broadcast(JSON.stringify({
+                type: RealTimeCommand.updateMoveView,
+                content: data.content // 直接转发原始数据给其他客户端
+            }));
+        }
+    }
+
+
+    // 处理删除移动层
+    private async handleDeleteMoveView(webSocket: WebSocket, data: WebSocketMessage) {
+         if (data.content) {
+            const { id } = data.content;
+            const storageKey = `${PrefixType.moveView}${id}`;
+            // 删除storage中的元数据
+            await this.state.storage.delete(storageKey);
+
+            // 广播删除消息
+            this.broadcast(JSON.stringify({
+                 type: RealTimeCommand.deleteMoveView,
+                 content: { id }
+            }));
+
+        }
+    }
 
 
   // 清空绘图
