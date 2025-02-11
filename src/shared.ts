@@ -21,7 +21,8 @@ export enum RealTimeCommand{
             chat = "chat",
             updateBackground = "updateBackground",
             updateMoveView = "updateMoveView",
-            deleteMoveView = "deleteMoveView"
+            deleteMoveView = "deleteMoveView",
+            drawingUpdate = "drawingUpdate"
             }
 
 

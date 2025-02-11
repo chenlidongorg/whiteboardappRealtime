@@ -21,6 +21,33 @@ interface MoveViewMetadata {
 }
 
 
+// 添加绘画数据接口定义
+interface DrawingSyncData {
+    action: 'addStrokes' | 'removeStrokes' | 'moveStrokes' | 'clear';
+    strokes: StrokeData[];
+    timestamp: number;
+    userId: string;
+}
+
+interface StrokeData {
+    points: Point[];
+    color: ColorComponents;
+    transform: DOMMatrix;
+}
+
+interface Point {
+    x: number;
+    y: number;
+}
+
+interface ColorComponents {
+    red: number;
+    green: number;
+    blue: number;
+    alpha: number;
+}
+
+
 // Chat类定义
 export class Chat {
   private fileName: string | null = null; // 存储文件名
@@ -116,6 +143,10 @@ export class Chat {
           this.handleClear(webSocket);
           break;
 
+        case RealTimeCommand.drawingUpdate:
+         await this.handleDrawingUpdate(webSocket, data);
+         break;
+
         default:
           console.warn('Unknown message type:', data.type); //未知的消息类型
 
@@ -183,7 +214,7 @@ export class Chat {
               const moveModelsMap = await this.state.storage.list({
                   prefix: PrefixType.moveView
               });
-              
+
               // 将Map转换为数组
               const moveModels = Array.from(moveModelsMap.values());
 
@@ -208,6 +239,17 @@ export class Chat {
           // 如果获取失败,设置为null或适当的默认值
           initData.bgModel = null;
       }
+
+// 获取绘图数据
+    try {
+        const drawingData = await this.state.storage.get('drawing');
+        initData.drawingData = drawingData || []; // 如果没有绘图数据则返回空数组
+    } catch (error) {
+        console.error('Error fetching drawing data:', error);
+        initData.drawingData = [];
+    }
+
+
 
       // 发送初始化数据给加入的用户
       webSocket.send(
@@ -305,6 +347,54 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
 
         }
     }
+
+
+// 处理绘画更新
+    private async handleDrawingUpdate(webSocket: WebSocket, data: WebSocketMessage) {
+        const userId = this.connectionToUser.get(webSocket);
+        if (!userId) return;
+
+        const drawingData = data.content as DrawingSyncData;
+        if (!drawingData) return;
+
+        // 存储绘画数据
+        try {
+            let currentDrawings = await this.state.storage.get('drawing') || [];
+
+            switch (drawingData.action) {
+                case 'addStrokes':
+                case 'moveStrokes':
+                    currentDrawings = [...currentDrawings, drawingData];
+                    break;
+
+                case 'removeStrokes':
+                    // 从现有绘画数据中移除指定的笔画
+                    currentDrawings = currentDrawings.filter(stroke =>
+                        !drawingData.strokes.some(s =>
+                            JSON.stringify(s) === JSON.stringify(stroke)
+                        )
+                    );
+                    break;
+
+                case 'clear':
+                    currentDrawings = [];
+                    break;
+            }
+
+            // 更新持久化存储
+            await this.state.storage.put('drawing', currentDrawings);
+
+            // 广播绘画更新
+            const payload = JSON.stringify({
+                type: RealTimeCommand.drawingUpdate,
+                content: drawingData
+            });
+            this.broadcast(payload, webSocket); // 排除发送者自己
+        } catch (error) {
+            console.error('Error handling drawing update:', error);
+        }
+    }
+
 
 
   // 清空绘图
