@@ -387,7 +387,7 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
             // 广播绘画更新
             const payload = JSON.stringify({
                 type: RealTimeCommand.drawingUpdate,
-                content: drawingData
+                content: data.content
             });
             this.broadcast(payload, webSocket); // 排除发送者自己
         } catch (error) {
