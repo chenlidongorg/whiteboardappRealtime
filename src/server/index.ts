@@ -177,16 +177,25 @@ export class Chat {
       };
 
       // 安全地获取和添加 moveModels
-      try {
-          const moveModels = await this.state.storage.list(PrefixType.moveView);
-          if (moveModels) {
-              initData.moveModels = moveModels;
+
+          try {
+              // 使用正确的list选项格式
+              const moveModelsMap = await this.state.storage.list({
+                  prefix: PrefixType.moveView
+              });
+              
+              // 将Map转换为数组
+              const moveModels = Array.from(moveModelsMap.values());
+
+              if (moveModels.length > 0) {
+                  initData.moveModels = moveModels;
+              } else {
+                  initData.moveModels = [];
+              }
+          } catch (error) {
+              console.error('Error fetching moveModels:', error);
+              initData.moveModels = [];
           }
-      } catch (error) {
-          console.error('Error fetching moveModels:', error);
-          // 如果获取失败,设置为空数组
-          initData.moveModels = [];
-      }
 
       // 安全地获取和添加 bgModel
       try {
