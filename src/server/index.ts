@@ -359,41 +359,45 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
        try {
            const { id, action, model } = data.content;
 
+          /*
            // 添加action类型检查
-           if (!['addStrokes', 'moveStrokes', 'removeStrokes', 'clear'].includes(action)) {
-               throw new Error('Invalid drawing action');
-           }
+                     if (!['addStrokes', 'moveStrokes', 'removeStrokes', 'clear'].includes(action)) {
+                         throw new Error('Invalid drawing action');
+                     }
 
-           const metadata: Metadata = {
-               id,
-               model,
-               timestamp: Date.now()
-           };
+                     const metadata: Metadata = {
+                         id,
+                         model,
+                         timestamp: Date.now()
+                     };
 
-           const storageKey = `${PrefixType.drawing}${id}`;
+                     const storageKey = `${PrefixType.drawing}${id}`;
 
-           // 优化存储逻辑
-           switch (action) {
-               case 'addStrokes':
-               case 'moveStrokes':
-                   await this.state.storage.put(storageKey, metadata);
-                   break;
-               case 'removeStrokes':
-                   // 删除对应的存储
-                   await this.state.storage.delete(storageKey);
-                   break;
-               case 'clear':
-                   await this.state.storage.delete({ prefix: PrefixType.drawing });
-                   break;
-           }
+                     // 优化存储逻辑
+                     switch (action) {
+                         case 'addStrokes':
+                         case 'moveStrokes':
+                             await this.state.storage.put(storageKey, metadata);
+                             break;
+                         case 'removeStrokes':
+                             // 删除对应的存储
+                             await this.state.storage.delete(storageKey);
+                             break;
+                         case 'clear':
+                             await this.state.storage.delete({ prefix: PrefixType.drawing });
+                             break;
+                     }
+
+
+          */
 
            // 广播更新
-           const payload = JSON.stringify({
-               type: RealTimeCommand.drawingUpdate,
-               content: data.content
-           });
+                               const payload = JSON.stringify({
+                                   type: RealTimeCommand.drawingUpdate,
+                                   content: data.content
+                               });
 
-           //this.broadcast(payload, webSocket);
+           this.broadcast(payload, webSocket);
 
        } catch (error) {
            console.error('Error handling drawing update:', error);
