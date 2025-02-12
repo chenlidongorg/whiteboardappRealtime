@@ -8,7 +8,7 @@ export enum UserRole {
 }
 
 export enum PrefixType {
-  moveView = "moveview_"
+  moveView = "moveview_",
   drawing = "drawing_"
 }
 
