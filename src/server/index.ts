@@ -346,7 +346,7 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
             this.broadcast(JSON.stringify({
                  type: RealTimeCommand.deleteMoveView,
                  content: { id }
-            }));
+            }), webSocket);
 
         }
     }
@@ -388,7 +388,11 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
                 type: RealTimeCommand.drawingUpdate,
                 content: data.content
             });
-            this.broadcast(payload, webSocket); // 排除发送者自己
+
+
+
+            this.broadcast(payload, webSocket);
+
         } catch (error) {
             console.error('Error handling drawing update:', error);
         }
