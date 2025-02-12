@@ -303,7 +303,7 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
         this.state.storage.put(RealTimeCommand.updateBackground, data.content);
 
         const payload = JSON.stringify({ type: RealTimeCommand.updateBackground, content: data.content });
-        this.broadcast(payload); // 广播消息
+        this.broadcast(payload, webSocket); // 广播消息
     }
 }
 
@@ -391,7 +391,7 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
 
 
 
-            this.broadcast(payload, webSocket);
+            //this.broadcast(payload, webSocket);
 
         } catch (error) {
             console.error('Error handling drawing update:', error);
