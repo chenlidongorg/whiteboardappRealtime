@@ -353,52 +353,57 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
 
 
 // 处理绘画更新
-    private async handleDrawingUpdate(webSocket: WebSocket, data: WebSocketMessage) {
-    if (data.content) {
+   private async handleDrawingUpdate(webSocket: WebSocket, data: WebSocketMessage) {
+       if (!data.content) return;
 
-            const { id, action, model} = data.content;
+       try {
+           const { id, action, model } = data.content;
 
-           // 准备元数据
-            const metadata: Metadata = {
-                id,
-                model,
-                timestamp: Date.now()
-            };
+           // 添加action类型检查
+           if (!['addStrokes', 'moveStrokes', 'removeStrokes', 'clear'].includes(action)) {
+               throw new Error('Invalid drawing action');
+           }
 
-        // 存储绘画数据
-        try {
+           const metadata: Metadata = {
+               id,
+               model,
+               timestamp: Date.now()
+           };
 
-        // 保存元数据到storage key
-            const storageKey = `${PrefixType.drawing}${id}`;
-            switch (action) {
-                case 'addStrokes':0
-                case 'moveStrokes':
-                await this.state.storage.put(storageKey, metadata);
-                    break;
-                case 'removeStrokes':
-                    await this.state.storage.put(storageKey, metadata);//删除信息包含在model里面，让客户端去匹配删除，节省服务器资源
-                    break;
-                case 'clear':
-                    await this.state.storage.delete({prefix: PrefixType.drawing});
-                    break;
-            }
+           const storageKey = `${PrefixType.drawing}${id}`;
 
-            // 广播绘画更新
-            const payload = JSON.stringify({
-                type: RealTimeCommand.drawingUpdate,
-                content: data.content
-            });
+           // 优化存储逻辑
+           switch (action) {
+               case 'addStrokes':
+               case 'moveStrokes':
+                   await this.state.storage.put(storageKey, metadata);
+                   break;
+               case 'removeStrokes':
+                   // 删除对应的存储
+                   await this.state.storage.delete(storageKey);
+                   break;
+               case 'clear':
+                   await this.state.storage.delete({ prefix: PrefixType.drawing });
+                   break;
+           }
 
+           // 广播更新
+           const payload = JSON.stringify({
+               type: RealTimeCommand.drawingUpdate,
+               content: data.content
+           });
 
+           this.broadcast(payload, webSocket);
 
-            //this.broadcast(payload, webSocket);
-
-        } catch (error) {
-            console.error('Error handling drawing update:', error);
-        }
-
-        }
-    }
+       } catch (error) {
+           console.error('Error handling drawing update:', error);
+           // 可以添加错误响应
+           webSocket.send(JSON.stringify({
+               type: 'error',
+               content: 'Failed to process drawing update'
+           }));
+       }
+   }
 
 
 
