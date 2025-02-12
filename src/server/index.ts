@@ -388,16 +388,16 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
                              break;
                      }
 
-
-          */
-
-           // 广播更新
                                const payload = JSON.stringify({
                                    type: RealTimeCommand.drawingUpdate,
                                    content: data.content
                                });
 
            this.broadcast(payload, webSocket);
+
+          */
+
+           // 广播更新
 
        } catch (error) {
            console.error('Error handling drawing update:', error);
