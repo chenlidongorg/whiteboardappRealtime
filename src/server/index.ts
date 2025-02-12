@@ -381,7 +381,7 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
                              break;
                          case 'removeStrokes':
                              // 删除对应的存储
-                             await this.state.storage.delete(storageKey);
+                             await this.state.storage.put(storageKey, metadata);
                              break;
                          case 'clear':
                              await this.state.storage.delete({ prefix: PrefixType.drawing });
