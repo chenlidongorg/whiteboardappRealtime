@@ -359,7 +359,7 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
        try {
            const { id, action, model } = data.content;
 
-          /*
+
            // 添加action类型检查
                      if (!['addStrokes', 'moveStrokes', 'removeStrokes', 'clear'].includes(action)) {
                          throw new Error('Invalid drawing action');
@@ -395,9 +395,7 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
 
            this.broadcast(payload, webSocket);
 
-          */
 
-           // 广播更新
 
        } catch (error) {
            console.error('Error handling drawing update:', error);
