@@ -14,20 +14,12 @@ interface WebSocketMessage {
 }
 
 // 定义移动层元数据接口
-interface MoveViewMetadata {
+interface Metadata {
     id: string;
     model: string;     // 移动层基本信息
     timestamp: number; // 用于追踪更新时间
 }
 
-
-// 添加绘画数据接口定义
-interface DrawingSyncData {
-    action: 'addStrokes' | 'removeStrokes' | 'moveStrokes' | 'clear';
-    strokes: StrokeData[];
-    timestamp: number;
-    userId: string;
-}
 
 interface StrokeData {
     points: Point[];
@@ -240,15 +232,26 @@ export class Chat {
           initData.bgModel = null;
       }
 
-// 获取绘图数据
-    try {
-        const drawingData = await this.state.storage.get('drawing');
-        initData.drawingData = drawingData || []; // 如果没有绘图数据则返回空数组
-    } catch (error) {
-        console.error('Error fetching drawing data:', error);
-        initData.drawingData = [];
-    }
+// 安全地获取 绘画线条
 
+          try {
+              // 使用正确的list选项格式
+              const drawingModelsMap = await this.state.storage.list({
+                  prefix: PrefixType.drawing
+              });
+
+              // 将Map转换为数组
+              const drawingModels = Array.from(drawingModelsMap.values());
+
+              if (drawingModels.length > 0) {
+                  initData.drawingModels = drawingModels;
+              } else {
+                  initData.drawingModels = [];
+              }
+          } catch (error) {
+              console.error('Error fetching drawingModels:', error);
+              initData.drawingModels = [];
+          }
 
 
       // 发送初始化数据给加入的用户
@@ -311,7 +314,7 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
             const { id, model } = data.content;
 
             // 准备元数据
-            const metadata: MoveViewMetadata = {
+            const metadata: Metadata = {
                 id,
                 model,
                 timestamp: Date.now()
@@ -351,38 +354,34 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
 
 // 处理绘画更新
     private async handleDrawingUpdate(webSocket: WebSocket, data: WebSocketMessage) {
-        const userId = this.connectionToUser.get(webSocket);
-        if (!userId) return;
+    if (data.content) {
 
-        const drawingData = data.content as DrawingSyncData;
-        if (!drawingData) return;
+            const { id, action, model} = data.content;
+
+           // 准备元数据
+            const metadata: Metadata = {
+                id,
+                model,
+                timestamp: Date.now()
+            };
 
         // 存储绘画数据
         try {
-            let currentDrawings = await this.state.storage.get('drawing') || [];
 
-            switch (drawingData.action) {
-                case 'addStrokes':
+        // 保存元数据到storage key
+            const storageKey = `${PrefixType.drawing}${id}`;
+            switch (action) {
+                case 'addStrokes':0
                 case 'moveStrokes':
-                    currentDrawings = [...currentDrawings, drawingData];
+                await this.state.storage.put(storageKey, metadata);
                     break;
-
                 case 'removeStrokes':
-                    // 从现有绘画数据中移除指定的笔画
-                    currentDrawings = currentDrawings.filter(stroke =>
-                        !drawingData.strokes.some(s =>
-                            JSON.stringify(s) === JSON.stringify(stroke)
-                        )
-                    );
+                    await this.state.storage.put(storageKey, metadata);//删除信息包含在model里面，让客户端去匹配删除，节省服务器资源
                     break;
-
                 case 'clear':
-                    currentDrawings = [];
+                    await this.state.storage.delete({prefix: PrefixType.drawing});
                     break;
             }
-
-            // 更新持久化存储
-            await this.state.storage.put('drawing', currentDrawings);
 
             // 广播绘画更新
             const payload = JSON.stringify({
@@ -392,6 +391,8 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
             this.broadcast(payload, webSocket); // 排除发送者自己
         } catch (error) {
             console.error('Error handling drawing update:', error);
+        }
+
         }
     }
 

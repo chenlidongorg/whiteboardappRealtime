@@ -9,7 +9,7 @@ export enum UserRole {
 
 export enum PrefixType {
   moveView = "moveview_"
-
+  drawing = "drawing_"
 }
 
 export enum RealTimeCommand{
