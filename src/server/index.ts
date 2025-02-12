@@ -329,7 +329,7 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
             this.broadcast(JSON.stringify({
                 type: RealTimeCommand.updateMoveView,
                 content: data.content // 直接转发原始数据给其他客户端
-            }));
+            }), webSocket);
         }
     }
 
