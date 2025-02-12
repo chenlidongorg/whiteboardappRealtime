@@ -393,7 +393,7 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
                content: data.content
            });
 
-           this.broadcast(payload, webSocket);
+           //this.broadcast(payload, webSocket);
 
        } catch (error) {
            console.error('Error handling drawing update:', error);
