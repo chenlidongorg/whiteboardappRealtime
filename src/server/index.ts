@@ -21,24 +21,6 @@ interface Metadata {
 }
 
 
-interface StrokeData {
-    points: Point[];
-    color: ColorComponents;
-    transform: DOMMatrix;
-}
-
-interface Point {
-    x: number;
-    y: number;
-}
-
-interface ColorComponents {
-    red: number;
-    green: number;
-    blue: number;
-    alpha: number;
-}
-
 
 // Chat类定义
 export class Chat {
@@ -176,7 +158,7 @@ export class Chat {
 
   // 处理创建房间逻辑
   private handleCreate(webSocket: WebSocket, data: WebSocketMessage) {
-  
+
     const { userId, userName, role, fileName } = data.content;
     const userSession = this.loginUserSession(webSocket, userId, userName, role);
     if (!userSession) return;
