@@ -77,7 +77,9 @@ export class Chat {
     // 检查是否没有连接用户
         if (this.connections.size === 0) {
           // 清理持久化数据
+
           this.state.storage.deleteAll()
+
             .then(() => {
               console.log('Cleared background data as last user left.');
             })
@@ -174,9 +176,12 @@ export class Chat {
 
   // 处理创建房间逻辑
   private handleCreate(webSocket: WebSocket, data: WebSocketMessage) {
+  
     const { userId, userName, role, fileName } = data.content;
     const userSession = this.loginUserSession(webSocket, userId, userName, role);
     if (!userSession) return;
+
+    this.state.storage.deleteAll();
 
     if (fileName) {
       this.fileName = fileName; // 存储文件名
@@ -358,7 +363,6 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
 
        try {
            const { id, action, model } = data.content;
-
 
            // 添加action类型检查
                      if (!['addStrokes', 'moveStrokes', 'removeStrokes', 'clear'].includes(action)) {
