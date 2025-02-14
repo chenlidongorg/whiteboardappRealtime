@@ -11,6 +11,7 @@ interface Env {
 interface WebSocketMessage {
   type: string; // 消息类型
   content?: any; // 消息内容（可选）
+  broadcast?: boolean;
 }
 
 // 定义移动层元数据接口
@@ -289,8 +290,11 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
         // 将背景数据持久化，比如保存在 Durable Object 的 state 中
         this.state.storage.put(RealTimeCommand.updateBackground, data.content);
 
+        if (!data.broadcast) return;
+
         const payload = JSON.stringify({ type: RealTimeCommand.updateBackground, content: data.content });
         this.broadcast(payload, webSocket); // 广播消息
+
     }
 }
 
@@ -312,6 +316,7 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
             const storageKey = `${PrefixType.moveView}${id}`;
             await this.state.storage.put(storageKey, metadata);
 
+            if (!data.broadcast) return;
             // 广播更新消息给所有连接的客户端
             this.broadcast(JSON.stringify({
                 type: RealTimeCommand.updateMoveView,
@@ -362,22 +367,23 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
                      // 优化存储逻辑
                      switch (action) {
                          case 'addStrokes':
+                          await this.state.storage.put(storageKey, metadata);
+                          break;
                          case 'moveStrokes':
                              await this.state.storage.put(storageKey, metadata);
                              break;
                          case 'removeStrokes':
-                             // 删除对应的存储
                              await this.state.storage.put(storageKey, metadata);
                              break;
                          case 'clear':
                              await this.state.storage.delete({ prefix: PrefixType.drawing });
                              break;
                      }
-
-                               const payload = JSON.stringify({
-                                   type: RealTimeCommand.drawingUpdate,
-                                   content: data.content
-                               });
+           if (!data.broadcast) return;
+            const payload = JSON.stringify({
+                                               type: RealTimeCommand.drawingUpdate,
+                                               content: data.content
+                                           });
 
            this.broadcast(payload, webSocket);
 
