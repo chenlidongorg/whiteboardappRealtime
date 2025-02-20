@@ -179,12 +179,13 @@ export class Chat {
 
     if (!user || user.role !== UserRole.HOST) {
 
+
       // 非HOST关闭 - 只关闭连接，让onClose处理清理
-        try {
-            webSocket.close(1000, 'User left room');
-        } catch (error) {
-            console.error('Error closing connection:', error);
-        }
+              try {
+                  webSocket.close(1000, 'User left room');
+              } catch (error) {
+                  console.error('Error closing connection:', error);
+              }
 
         /*
       // 只有房主可以关闭房间
@@ -194,17 +195,21 @@ export class Chat {
       }));
       */
 
-
       return;
     }
-
-
 
     // 标记房间已关闭
     this.isRoomClosed = true;
 
+// 广播房间关闭消息
+    const closeMessage = JSON.stringify({
+      type: RealTimeCommand.closeRoom,
+      content: 'room_closed'
+    });
+    this.broadcast(closeMessage);
+
     // 广播房间关闭消息
-    this.sendSystemMessage(`room_closed`);
+    //this.sendSystemMessage(`room_closed`);
 
     // 等待一小段时间确保消息发送完成
     await new Promise(resolve => setTimeout(resolve, 1000));
