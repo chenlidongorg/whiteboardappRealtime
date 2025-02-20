@@ -58,6 +58,7 @@ export class Chat {
     }
     this.connections.delete(webSocket);
 
+
     // 检查是否没有连接用户
         if (this.connections.size === 0) {
           // 清理持久化数据
@@ -174,14 +175,30 @@ export class Chat {
     if (!userId) return;
 
     const user = this.users.get(userId);
+
+
     if (!user || user.role !== UserRole.HOST) {
+
+      // 非HOST关闭 - 只关闭连接，让onClose处理清理
+        try {
+            webSocket.close(1000, 'User left room');
+        } catch (error) {
+            console.error('Error closing connection:', error);
+        }
+
+        /*
       // 只有房主可以关闭房间
       webSocket.send(JSON.stringify({
         type: 'error',
         content: 'Only host can close the room'
       }));
+      */
+
+
       return;
     }
+
+
 
     // 标记房间已关闭
     this.isRoomClosed = true;
