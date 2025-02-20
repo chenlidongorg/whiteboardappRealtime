@@ -187,11 +187,7 @@ export class Chat {
     this.isRoomClosed = true;
 
     // 广播房间关闭消息
-    const closeMessage = JSON.stringify({
-      type: RealTimeCommand.closeRoom,
-      content: 'Room closed by host'
-    });
-    this.broadcast(closeMessage);
+    this.sendSystemMessage(`room_closed`);
 
     // 等待一小段时间确保消息发送完成
     await new Promise(resolve => setTimeout(resolve, 1000));
