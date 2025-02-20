@@ -24,7 +24,8 @@ export enum RealTimeCommand{
             deleteMoveView = "deleteMoveView",
             drawingUpdate = "drawingUpdate",
             userUpdate = "userUpdate",
-            closeRoom = 'closeRoom'
+            closeRoom = 'closeRoom',
+            error = 'error'
             }
 
 
@@ -43,6 +44,20 @@ export enum MessageType {
   TEXT = "text",
   SYSTEM = "system",
   FILE = "file"
+}
+
+
+enum ErrorType {
+  INVALID_FORMAT = 'Invalid message format',
+  MISSING_USER_INFO = 'Missing user information',
+  USER_NOT_FOUND = 'User not found',
+  SESSION_NOT_FOUND = 'User session not found',
+  NOT_JOINED = 'User not joined',
+  DRAWING_UPDATE_FAILED = 'Failed to process drawing update',
+  PERMISSION_DENIED = 'Permission denied',
+  ONLY_HOST_CAN_DO = 'Only host can close the room',
+  ROOM_IS_CLOSED = 'Room is closed',
+  USER_NOT_JOINED = User not joined
 }
 
 // 聊天消息

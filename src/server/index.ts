@@ -1,5 +1,5 @@
 import { DurableObjectState } from 'cloudflare:workers';
-import { ChatMessage, UserSession, MessageType, UserRole, RealTimeCommand, PrefixType } from '../shared';
+import { ChatMessage, UserSession, MessageType, UserRole, RealTimeCommand, PrefixType, ErrorType } from '../shared';
 
 // 定义环境变量接口
 interface Env {
@@ -143,15 +143,16 @@ export class Chat {
     } catch (error) {
 
       console.error('Error processing message:', error); // 处理消息错误
-      webSocket.send(JSON.stringify({ type: 'error', content: 'Invalid message format' })); // 无效的消息格式
-
+      //webSocket.send(JSON.stringify({ type: RealTimeCommand.error, content: 'Invalid message format' })); // 无效的消息格式
+      this.sendError(webSocket,ErrorType.INVALID_FORMAT);
     }
   }
 
   // 注册用户会话
   private loginUserSession(webSocket: WebSocket, userId: string, userName: string, role: string): UserSession | null {
     if (!userId || !userName) {
-      webSocket.send(JSON.stringify({ type: 'error', content: 'Missing userId or userName' }));
+      //webSocket.send(JSON.stringify({ type: RealTimeCommand.error, content: 'Missing userId or userName' }));
+      this.sendError(webSocket,ErrorType.MISSING_USER_INFO);
       return null;
     }
 
@@ -179,12 +180,27 @@ export class Chat {
 
     if (!user || user.role !== UserRole.HOST) {
 
-      // 只有房主可以关闭房间
-      webSocket.send(JSON.stringify({
-        type: 'error',
-        content: 'Only host can close the room'
-      }));
+ // 非HOST关闭 - 只关闭连接，让onClose处理清理
+             /*
 
+              try {
+                               webSocket.close(1000, 'User left room');
+                           } catch (error) {
+                               console.error('Error closing connection:', error);
+                           }
+
+                           */
+
+
+      // 只有房主可以关闭房间
+     /*
+      webSocket.send(JSON.stringify({
+             type: RealTimeCommand.error,
+             content: 'Only host can close the room'
+           }));
+     */
+
+      this.sendError(webSocket,ErrorType.ONLY_HOST_CAN_DO);
       return;
     }
 
@@ -231,10 +247,14 @@ private handleUserUpdate(webSocket: WebSocket, data: WebSocketMessage) {
 
     if (!userId) {
         // 如果找不到userId,返回错误
+       /*
         webSocket.send(JSON.stringify({
-            type: 'error',
-            content: 'User not found'
-        }));
+                   type: RealTimeCommand.error,
+                   content: 'User not found'
+               }));
+       */
+
+        this.sendError(webSocket,ErrorType.USER_NOT_FOUND);
         return;
     }
 
@@ -242,10 +262,15 @@ private handleUserUpdate(webSocket: WebSocket, data: WebSocketMessage) {
     const userSession = this.users.get(userId);
     if (!userSession) {
         // 如果找不到用户会话,返回错误
+        /*
         webSocket.send(JSON.stringify({
-            type: 'error',
-            content: 'User session not found'
-        }));
+                    type: RealTimeCommand.error,
+                    content: 'User session not found'
+                }));
+        */
+
+                this.sendError(webSocket,ErrorType.SESSION_NOT_FOUND);
+
         return;
     }
 
@@ -283,10 +308,17 @@ private handleUserUpdate(webSocket: WebSocket, data: WebSocketMessage) {
   private async handleJoin(webSocket: WebSocket, data: WebSocketMessage) {
 
   if (this.isRoomClosed) {
+
+
+       /*
         webSocket.send(JSON.stringify({
-          type: 'error',
-          content: 'Room is closed'
-        }));
+                 type: RealTimeCommand.error,
+                 content: 'Room is closed'
+               }));
+       */
+
+        this.sendError(webSocket,ErrorType.ROOM_IS_CLOSED);
+
         webSocket.close(1000, 'Room is closed');
         return;
       }
@@ -374,7 +406,8 @@ private handleUserUpdate(webSocket: WebSocket, data: WebSocketMessage) {
   private handleChat(webSocket: WebSocket, data: WebSocketMessage) {
     const userId = this.connectionToUser.get(webSocket);
     if (!userId) {
-      webSocket.send(JSON.stringify({ type: 'error', content: 'User not joined' }));
+     // webSocket.send(JSON.stringify({ type: RealTimeCommand.error, content: 'User not joined' }));
+      this.sendError(webSocket,ErrorType.USER_NOT_JOINED);
       return;
     }
 
@@ -508,10 +541,13 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
        } catch (error) {
            console.error('Error handling drawing update:', error);
            // 可以添加错误响应
+          /*
            webSocket.send(JSON.stringify({
-               type: 'error',
-               content: 'Failed to process drawing update'
-           }));
+                         type: RealTimeCommand.error,
+                         content: 'Failed to process drawing update'
+                     }));
+                     */
+           this.sendError(webSocket,ErrorType.DRAWING_UPDATE_FAILED);
        }
    }
 
@@ -550,6 +586,16 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
     const payload = JSON.stringify({ type: RealTimeCommand.chat, content: message });
     this.broadcast(payload); // 广播系统消息
   }
+
+// 添加一个用于发送错误消息的辅助函数
+private sendError(webSocket: WebSocket, errorType: ErrorType) {
+  webSocket.send(JSON.stringify({
+    type: RealTimeCommand.error,
+    content: errorType
+  }));
+}
+
+
 
   // 广播用户列表
   private broadcastUserList() {
