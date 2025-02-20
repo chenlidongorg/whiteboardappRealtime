@@ -22,7 +22,9 @@ export enum RealTimeCommand{
             updateBackground = "updateBackground",
             updateMoveView = "updateMoveView",
             deleteMoveView = "deleteMoveView",
-            drawingUpdate = "drawingUpdate"
+            drawingUpdate = "drawingUpdate",
+            userUpdate = "userUpdate",
+            closeRoom = 'closeRoom'
             }
 
 

@@ -25,6 +25,7 @@ interface Metadata {
 
 // Chat类定义
 export class Chat {
+  private isRoomClosed: boolean = false; // 添加房间状态标记
   private fileName: string | null = null; // 存储文件名
   private users: Map<string, UserSession> = new Map(); // 用户列表
   private messages: ChatMessage[] = []; // 聊天记录
@@ -116,12 +117,21 @@ export class Chat {
           this.handleDeleteMoveView(webSocket, data);
           break;
 
+        case RealTimeCommand.userUpdate: // 修改名字
+          this.handleUserUpdate(webSocket, data);
+          break;
+
+
         case RealTimeCommand.clear: //清空绘图数据
           this.handleClear(webSocket);
           break;
 
         case RealTimeCommand.drawingUpdate:
          await this.handleDrawingUpdate(webSocket, data);
+         break;
+
+        case RealTimeCommand.closeRoom:
+         await this.handleCloseRoom(webSocket, data);
          break;
 
         default:
@@ -157,6 +167,93 @@ export class Chat {
     return userSession;
   }
 
+
+// 处理关闭房间的方法
+  private async handleCloseRoom(webSocket: WebSocket, data: WebSocketMessage) {
+    const userId = this.connectionToUser.get(webSocket);
+    if (!userId) return;
+
+    const user = this.users.get(userId);
+    if (!user || user.role !== UserRole.HOST) {
+      // 只有房主可以关闭房间
+      webSocket.send(JSON.stringify({
+        type: 'error',
+        content: 'Only host can close the room'
+      }));
+      return;
+    }
+
+    // 标记房间已关闭
+    this.isRoomClosed = true;
+
+    // 广播房间关闭消息
+    const closeMessage = JSON.stringify({
+      type: RealTimeCommand.closeRoom,
+      content: 'Room closed by host'
+    });
+    this.broadcast(closeMessage);
+
+    // 等待一小段时间确保消息发送完成
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // 断开所有连接
+    for (const ws of this.connections) {
+      try {
+        ws.close(1000, 'Room closed by host');
+      } catch (error) {
+        console.error('Error closing connection:', error);
+      }
+    }
+
+    // 清理所有数据
+    this.connections.clear();
+    this.users.clear();
+    this.connectionToUser.clear();
+    this.messages = [];
+    await this.state.storage.deleteAll();
+  }
+
+
+private handleUserUpdate(webSocket: WebSocket, data: WebSocketMessage) {
+    // 从消息内容中获取新的用户名
+    const {userName} = data.content;
+
+    // 获取当前websocket连接对应的用户ID
+    const userId = this.connectionToUser.get(webSocket);
+
+    if (!userId) {
+        // 如果找不到userId,返回错误
+        webSocket.send(JSON.stringify({
+            type: 'error',
+            content: 'User not found'
+        }));
+        return;
+    }
+
+    // 从users Map中获取用户会话
+    const userSession = this.users.get(userId);
+    if (!userSession) {
+        // 如果找不到用户会话,返回错误
+        webSocket.send(JSON.stringify({
+            type: 'error',
+            content: 'User session not found'
+        }));
+        return;
+    }
+
+    // 更新用户会话中的用户名
+    userSession.userName = userName;
+
+    // 更新users Map中的数据
+    this.users.set(userId, userSession);
+
+    // 发送系统消息通知名字更新
+    this.sendSystemMessage(`${userName}XXXupdate_name`);
+
+    // 广播更新后的用户列表给所有连接的客户端
+    this.broadcastUserList();
+}
+
   // 处理创建房间逻辑
   private handleCreate(webSocket: WebSocket, data: WebSocketMessage) {
 
@@ -176,6 +273,17 @@ export class Chat {
 
   // 处理加入房间逻辑
   private async handleJoin(webSocket: WebSocket, data: WebSocketMessage) {
+
+  if (this.isRoomClosed) {
+        webSocket.send(JSON.stringify({
+          type: 'error',
+          content: 'Room is closed'
+        }));
+        webSocket.close(1000, 'Room is closed');
+        return;
+      }
+
+
       const { userId, userName, role } = data.content;
       const userSession = this.loginUserSession(webSocket, userId, userName, role);
       if (!userSession) return;
