@@ -269,7 +269,7 @@ private handleUserUpdate(webSocket: WebSocket, data: WebSocketMessage) {
                 }));
         */
 
-                this.sendError(webSocket,ErrorType.SESSION_NOT_FOUND);
+       this.sendError(webSocket,ErrorType.SESSION_NOT_FOUND);
 
         return;
     }
