@@ -179,21 +179,11 @@ export class Chat {
 
     if (!user || user.role !== UserRole.HOST) {
 
-
-      // 非HOST关闭 - 只关闭连接，让onClose处理清理
-              try {
-                  webSocket.close(1000, 'User left room');
-              } catch (error) {
-                  console.error('Error closing connection:', error);
-              }
-
-        /*
       // 只有房主可以关闭房间
       webSocket.send(JSON.stringify({
         type: 'error',
         content: 'Only host can close the room'
       }));
-      */
 
       return;
     }
