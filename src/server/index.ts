@@ -209,7 +209,7 @@ export class Chat {
       this.fileName = fileName;
     }
 
-    this.sendSystemMessage(`${userName}$XXXjoined_room`);
+    this.sendSystemMessage(`${userName}XXXjoined_room`);
     this.broadcastUserList();
   }
 
