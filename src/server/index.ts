@@ -48,7 +48,7 @@ export class Chat {
       const user = this.users.get(userId);
       if (user) {
         this.users.delete(userId);
-        this.sendSystemMessage(`${user.userName}${"left_room"}`);
+        this.sendSystemMessage(`${user.userName}XXX${"left_room"}`);
         this.broadcastUserList(); // 广播用户列表
       }
       this.connectionToUser.delete(webSocket);
@@ -193,7 +193,7 @@ export class Chat {
     userSession.userName = userName;
     this.users.set(userId, userSession);
 
-    this.sendSystemMessage(`${userName}${"updated_name"}`);
+    this.sendSystemMessage(`${userName}XXX${"updated_name"}`);
     this.broadcastUserList();
   }
 
@@ -209,7 +209,7 @@ export class Chat {
       this.fileName = fileName;
     }
 
-    this.sendSystemMessage(`${userName}${"joined_room"}`);
+    this.sendSystemMessage(`${userName}$XXX{"joined_room"}`);
     this.broadcastUserList();
   }
 
