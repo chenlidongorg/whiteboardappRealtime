@@ -21,8 +21,6 @@ interface Metadata {
     timestamp: number; // 用于追踪更新时间
 }
 
-
-
 // Chat类定义
 export class Chat {
   private isRoomClosed: boolean = false; // 添加房间状态标记
@@ -50,116 +48,85 @@ export class Chat {
       const user = this.users.get(userId);
       if (user) {
         this.users.delete(userId);
-        this.sendSystemMessage(`${user.userName}XXXleave_room`);
+        this.sendSystemMessage(`${user.userName}${"left_room"}`);
         this.broadcastUserList(); // 广播用户列表
       }
       this.connectionToUser.delete(webSocket);
-
     }
     this.connections.delete(webSocket);
 
-
     // 检查是否没有连接用户
-        if (this.connections.size === 0) {
-          // 清理持久化数据
-
-          this.state.storage.deleteAll()
-
-            .then(() => {
-              console.log('Cleared background data as last user left.');
-            })
-
-            .catch(error => {
-              console.error('Failed to clear data:', error);
-            });
-        }
-
-
+    if (this.connections.size === 0) {
+      // 清理持久化数据
+      this.state.storage.deleteAll()
+        .then(() => {
+          console.log('cleared_data_user_left');
+        })
+        .catch(error => {
+          console.error('failed_clear_data', error);
+        });
+    }
   }
-
 
   // 处理 WebSocket 收到的消息
   private async onMessage(webSocket: WebSocket, messageData: string) {
-
     try {
-
       const data = JSON.parse(messageData) as WebSocketMessage;
-
       if (!data.type) {
-
-        throw new Error('Missing message type'); // 缺失消息类型
-
+        throw new Error('missing_message_type');
       }
 
-      // 根据消息类型处理不同操作
       switch (data.type) {
-
         case RealTimeCommand.create: //创建房间
           this.handleCreate(webSocket, data);
           break;
-
         case RealTimeCommand.join: //加入房间
           await this.handleJoin(webSocket, data);
           break;
-
         case RealTimeCommand.chat: //处理聊天消息
           this.handleChat(webSocket, data);
           break;
-
         case RealTimeCommand.updateBackground:
           this.handleUpdateBackground(webSocket, data);
           break;
-
         case RealTimeCommand.updateMoveView: // 处理移动层更新
           this.handleUpdateMoveView(webSocket, data);
           break;
-
         case RealTimeCommand.deleteMoveView: // 处理移动层更新
           this.handleDeleteMoveView(webSocket, data);
           break;
-
         case RealTimeCommand.userUpdate: // 修改名字
           this.handleUserUpdate(webSocket, data);
           break;
-
-
         case RealTimeCommand.clear: //清空绘图数据
           this.handleClear(webSocket);
           break;
-
         case RealTimeCommand.drawingUpdate:
-         await this.handleDrawingUpdate(webSocket, data);
-         break;
-
+          await this.handleDrawingUpdate(webSocket, data);
+          break;
         case RealTimeCommand.closeRoom:
-         await this.handleCloseRoom(webSocket, data);
-         break;
-
+          await this.handleCloseRoom(webSocket, data);
+          break;
         default:
-          console.warn('Unknown message type:', data.type); //未知的消息类型
-
+          console.warn('unknown_message_type', data.type);
       }
-
     } catch (error) {
-
-      console.error('Error processing message:', error); // 处理消息错误
-      //webSocket.send(JSON.stringify({ type: RealTimeCommand.error, content: 'Invalid message format' })); // 无效的消息格式
-      this.sendError(webSocket,ErrorType.INVALID_FORMAT);
+      console.error('error_processing_message', error);
+      this.sendError(webSocket, ErrorType.INVALID_FORMAT);
     }
   }
 
   // 注册用户会话
   private loginUserSession(webSocket: WebSocket, userId: string, userName: string, role: string): UserSession | null {
     if (!userId || !userName) {
-      //webSocket.send(JSON.stringify({ type: RealTimeCommand.error, content: 'Missing userId or userName' }));
-      this.sendError(webSocket,ErrorType.MISSING_USER_INFO);
+      this.sendError(webSocket, ErrorType.MISSING_USER_INFO);
       return null;
     }
 
     const userSession: UserSession = {
       userId,
       userName,
-      role: role || UserRole.VIEWER, // 默认角色为 VIEWER
+      role: role || UserRole.VIEWER,
       roomId: this.state.id.toString(),
     };
 
@@ -169,63 +136,34 @@ export class Chat {
     return userSession;
   }
 
-
-// 处理关闭房间的方法
+  // 处理关闭房间的方法
   private async handleCloseRoom(webSocket: WebSocket, data: WebSocketMessage) {
     const userId = this.connectionToUser.get(webSocket);
     if (!userId) return;
 
     const user = this.users.get(userId);
-
-
     if (!user || user.role !== UserRole.HOST) {
-
- // 非HOST关闭 - 只关闭连接，让onClose处理清理
-             /*
-
-              try {
-                               webSocket.close(1000, 'User left room');
-                           } catch (error) {
-                               console.error('Error closing connection:', error);
-                           }
-
-                           */
-
-
-      // 只有房主可以关闭房间
-     /*
-      webSocket.send(JSON.stringify({
-             type: RealTimeCommand.error,
-             content: 'Only host can close the room'
-           }));
-     */
-
-      this.sendError(webSocket,ErrorType.ONLY_HOST_CAN_DO);
+      this.sendError(webSocket, ErrorType.ONLY_HOST_CAN_DO);
       return;
     }
 
     // 标记房间已关闭
     this.isRoomClosed = true;
 
-// 广播房间关闭消息
     const closeMessage = JSON.stringify({
       type: RealTimeCommand.closeRoom,
       content: 'room_closed'
     });
     this.broadcast(closeMessage);
 
-    // 广播房间关闭消息
-    //this.sendSystemMessage(`room_closed`);
-
-    // 等待一小段时间确保消息发送完成
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     // 断开所有连接
     for (const ws of this.connections) {
       try {
-        ws.close(1000, 'Room closed by host');
+        ws.close(1000, 'room_closed_by_host');
       } catch (error) {
-        console.error('Error closing connection:', error);
+        console.error('error_closing_connection', error);
       }
     }
 
@@ -237,59 +175,30 @@ export class Chat {
     await this.state.storage.deleteAll();
   }
 
-
-private handleUserUpdate(webSocket: WebSocket, data: WebSocketMessage) {
-    // 从消息内容中获取新的用户名
-    const {userName} = data.content;
-
-    // 获取当前websocket连接对应的用户ID
+  private handleUserUpdate(webSocket: WebSocket, data: WebSocketMessage) {
+    const { userName } = data.content;
     const userId = this.connectionToUser.get(webSocket);
 
     if (!userId) {
-        // 如果找不到userId,返回错误
-       /*
-        webSocket.send(JSON.stringify({
-                   type: RealTimeCommand.error,
-                   content: 'User not found'
-               }));
-       */
-
-        this.sendError(webSocket,ErrorType.USER_NOT_FOUND);
-        return;
+      this.sendError(webSocket, ErrorType.USER_NOT_FOUND);
+      return;
     }
 
-    // 从users Map中获取用户会话
     const userSession = this.users.get(userId);
     if (!userSession) {
-        // 如果找不到用户会话,返回错误
-        /*
-        webSocket.send(JSON.stringify({
-                    type: RealTimeCommand.error,
-                    content: 'User session not found'
-                }));
-        */
-
-       this.sendError(webSocket,ErrorType.SESSION_NOT_FOUND);
-
-        return;
+      this.sendError(webSocket, ErrorType.SESSION_NOT_FOUND);
+      return;
     }
 
-    // 更新用户会话中的用户名
     userSession.userName = userName;
-
-    // 更新users Map中的数据
     this.users.set(userId, userSession);
 
-    // 发送系统消息通知名字更新
-    this.sendSystemMessage(`${userName}XXXupdate_name`);
-
-    // 广播更新后的用户列表给所有连接的客户端
+    this.sendSystemMessage(`${userName}${"updated_name"}`);
     this.broadcastUserList();
-}
+  }
 
   // 处理创建房间逻辑
   private handleCreate(webSocket: WebSocket, data: WebSocketMessage) {
-
     const { userId, userName, role, fileName } = data.content;
     const userSession = this.loginUserSession(webSocket, userId, userName, role);
     if (!userSession) return;
@@ -297,117 +206,90 @@ private handleUserUpdate(webSocket: WebSocket, data: WebSocketMessage) {
     this.state.storage.deleteAll();
 
     if (fileName) {
-      this.fileName = fileName; // 存储文件名
+      this.fileName = fileName;
     }
 
-    this.sendSystemMessage(`${userName}XXXjoined_room`);
-    this.broadcastUserList(); // 广播用户列表
+    this.sendSystemMessage(`${userName}${"joined_room"}`);
+    this.broadcastUserList();
   }
 
   // 处理加入房间逻辑
   private async handleJoin(webSocket: WebSocket, data: WebSocketMessage) {
+    if (this.isRoomClosed) {
+      this.sendError(webSocket, ErrorType.ROOM_IS_CLOSED);
+      webSocket.close(1000, 'room_is_closed');
+      return;
+    }
 
-  if (this.isRoomClosed) {
+    const { userId, userName, role } = data.content;
+    const userSession = this.loginUserSession(webSocket, userId, userName, role);
+    if (!userSession) return;
 
+    let initData: any = {
+      messages: this.messages,
+      users: Array.from(this.users.values()),
+      fileName: this.fileName
+    };
 
-       /*
-        webSocket.send(JSON.stringify({
-                 type: RealTimeCommand.error,
-                 content: 'Room is closed'
-               }));
-       */
+    // 安全地获取和添加 moveModels
+    try {
+      const moveModelsMap = await this.state.storage.list({
+        prefix: PrefixType.moveView
+      });
 
-        this.sendError(webSocket,ErrorType.ROOM_IS_CLOSED);
-
-        webSocket.close(1000, 'Room is closed');
-        return;
+      const moveModels = Array.from(moveModelsMap.values());
+      if (moveModels.length > 0) {
+        initData.moveModels = moveModels;
+      } else {
+        initData.moveModels = [];
       }
+    } catch (error) {
+      console.error('error_fetching_moveModels', error);
+      initData.moveModels = [];
+    }
 
-
-      const { userId, userName, role } = data.content;
-      const userSession = this.loginUserSession(webSocket, userId, userName, role);
-      if (!userSession) return;
-
-      // 初始化数据对象
-      let initData: any = {
-          messages: this.messages,
-          users: Array.from(this.users.values()),
-          fileName: this.fileName
-      };
-
-      // 安全地获取和添加 moveModels
-
-          try {
-              // 使用正确的list选项格式
-              const moveModelsMap = await this.state.storage.list({
-                  prefix: PrefixType.moveView
-              });
-
-              // 将Map转换为数组
-              const moveModels = Array.from(moveModelsMap.values());
-
-              if (moveModels.length > 0) {
-                  initData.moveModels = moveModels;
-              } else {
-                  initData.moveModels = [];
-              }
-          } catch (error) {
-              console.error('Error fetching moveModels:', error);
-              initData.moveModels = [];
-          }
-
-      // 安全地获取和添加 bgModel
-      try {
-          const bgModel = await this.state.storage.get(RealTimeCommand.updateBackground);
-          if (bgModel) {
-              initData.bgModel = bgModel;
-          }
-      } catch (error) {
-          console.error('Error fetching bgModel:', error);
-          // 如果获取失败,设置为null或适当的默认值
-          initData.bgModel = null;
+    // 安全地获取和添加 bgModel
+    try {
+      const bgModel = await this.state.storage.get(RealTimeCommand.updateBackground);
+      if (bgModel) {
+        initData.bgModel = bgModel;
       }
+    } catch (error) {
+      console.error('error_fetching_bgModel', error);
+      initData.bgModel = null;
+    }
 
-// 安全地获取 绘画线条
+    // 安全地获取绘画线条
+    try {
+      const drawingModelsMap = await this.state.storage.list({
+        prefix: PrefixType.drawing
+      });
 
-          try {
-              // 使用正确的list选项格式
-              const drawingModelsMap = await this.state.storage.list({
-                  prefix: PrefixType.drawing
-              });
+      const drawingModels = Array.from(drawingModelsMap.values());
+      if (drawingModels.length > 0) {
+        initData.drawingModels = drawingModels;
+      } else {
+        initData.drawingModels = [];
+      }
+    } catch (error) {
+      console.error('error_fetching_drawingModels', error);
+      initData.drawingModels = [];
+    }
 
-              // 将Map转换为数组
-              const drawingModels = Array.from(drawingModelsMap.values());
+    webSocket.send(JSON.stringify({
+      type: RealTimeCommand.initSetup,
+      content: initData
+    }));
 
-              if (drawingModels.length > 0) {
-                  initData.drawingModels = drawingModels;
-              } else {
-                  initData.drawingModels = [];
-              }
-          } catch (error) {
-              console.error('Error fetching drawingModels:', error);
-              initData.drawingModels = [];
-          }
-
-
-      // 发送初始化数据给加入的用户
-      webSocket.send(
-          JSON.stringify({
-              type: RealTimeCommand.initSetup,
-              content: initData
-          })
-      );
-
-      this.sendSystemMessage(`${userName}XXXjoined_room`);
-      this.broadcastUserList();
+    this.sendSystemMessage(`${userName}XXX${"joined_room"}`);
+    this.broadcastUserList();
   }
 
   // 处理聊天消息
   private handleChat(webSocket: WebSocket, data: WebSocketMessage) {
     const userId = this.connectionToUser.get(webSocket);
     if (!userId) {
-     // webSocket.send(JSON.stringify({ type: RealTimeCommand.error, content: 'User not joined' }));
-      this.sendError(webSocket,ErrorType.USER_NOT_JOINED);
+      this.sendError(webSocket, ErrorType.USER_NOT_JOINED);
       return;
     }
 
@@ -425,140 +307,106 @@ private handleUserUpdate(webSocket: WebSocket, data: WebSocketMessage) {
 
     this.messages.push(message);
 
-    // 如果需要，可以将此消息持久化保存
-
     const payload = JSON.stringify({ type: RealTimeCommand.chat, content: message });
-    this.broadcast(payload); // 广播消息
+    this.broadcast(payload);
   }
 
-
-
-// 处理背景更新的具体实现
-private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
+  // 处理背景更新的具体实现
+  private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
     if (data.content) {
-        // 将背景数据持久化，比如保存在 Durable Object 的 state 中
-        this.state.storage.put(RealTimeCommand.updateBackground, data.content);
-
-        if (!data.broadcast) return;
-
-        const payload = JSON.stringify({ type: RealTimeCommand.updateBackground, content: data.content });
-        this.broadcast(payload, webSocket); // 广播消息
-
+      this.state.storage.put(RealTimeCommand.updateBackground, data.content);
+      if (!data.broadcast) return;
+      const payload = JSON.stringify({ type: RealTimeCommand.updateBackground, content: data.content });
+      this.broadcast(payload, webSocket);
     }
-}
+  }
 
+  // 处理移动层更新
+  private async handleUpdateMoveView(webSocket: WebSocket, data: WebSocketMessage) {
+    if (data.content) {
+      const { id, model } = data.content;
+      const metadata: Metadata = {
+        id,
+        model,
+        timestamp: Date.now()
+      };
 
-// 处理移动层更新
-    private async handleUpdateMoveView(webSocket: WebSocket, data: WebSocketMessage) {
-        if (data.content) {
-            const { id, model } = data.content;
+      const storageKey = `${PrefixType.moveView}${id}`;
+      await this.state.storage.put(storageKey, metadata);
 
-            // 准备元数据
-            const metadata: Metadata = {
-                id,
-                model,
-                timestamp: Date.now()
-            };
-
-
-            // 保存元数据到storage
-            const storageKey = `${PrefixType.moveView}${id}`;
-            await this.state.storage.put(storageKey, metadata);
-
-            if (!data.broadcast) return;
-            // 广播更新消息给所有连接的客户端
-            this.broadcast(JSON.stringify({
-                type: RealTimeCommand.updateMoveView,
-                content: data.content // 直接转发原始数据给其他客户端
-            }), webSocket);
-        }
+      if (!data.broadcast) return;
+      this.broadcast(JSON.stringify({
+        type: RealTimeCommand.updateMoveView,
+        content: data.content
+      }), webSocket);
     }
+  }
 
+  // 处理删除移动层
+  private async handleDeleteMoveView(webSocket: WebSocket, data: WebSocketMessage) {
+    if (data.content) {
+      const { id } = data.content;
+      const storageKey = `${PrefixType.moveView}${id}`;
+      await this.state.storage.delete(storageKey);
 
-    // 处理删除移动层
-    private async handleDeleteMoveView(webSocket: WebSocket, data: WebSocketMessage) {
-         if (data.content) {
-            const { id } = data.content;
-            const storageKey = `${PrefixType.moveView}${id}`;
-            // 删除storage中的元数据
-            await this.state.storage.delete(storageKey);
-
-            // 广播删除消息
-            this.broadcast(JSON.stringify({
-                 type: RealTimeCommand.deleteMoveView,
-                 content: { id }
-            }), webSocket);
-
-        }
+      this.broadcast(JSON.stringify({
+        type: RealTimeCommand.deleteMoveView,
+        content: { id }
+      }), webSocket);
     }
+  }
 
+  // 处理绘画更新
+  private async handleDrawingUpdate(webSocket: WebSocket, data: WebSocketMessage) {
+    if (!data.content) return;
 
-// 处理绘画更新
-   private async handleDrawingUpdate(webSocket: WebSocket, data: WebSocketMessage) {
-       if (!data.content) return;
+    try {
+      const { id, action, model } = data.content;
 
-       try {
-           const { id, action, model } = data.content;
+      if (!['addStrokes', 'moveStrokes', 'removeStrokes', 'clear'].includes(action)) {
+        throw new Error('invalid_drawing_action');
+      }
 
-           // 添加action类型检查
-                     if (!['addStrokes', 'moveStrokes', 'removeStrokes', 'clear'].includes(action)) {
-                         throw new Error('Invalid drawing action');
-                     }
+      const metadata: Metadata = {
+        id,
+        model,
+        timestamp: Date.now()
+      };
 
-                     const metadata: Metadata = {
-                         id,
-                         model,
-                         timestamp: Date.now()
-                     };
+      const storageKey = `${PrefixType.drawing}${id}`;
 
-                     const storageKey = `${PrefixType.drawing}${id}`;
+      switch (action) {
+        case 'addStrokes':
+          await this.state.storage.put(storageKey, metadata);
+          break;
+        case 'moveStrokes':
+          await this.state.storage.put(storageKey, metadata);
+          break;
+        case 'removeStrokes':
+          await this.state.storage.put(storageKey, metadata);
+          break;
+        case 'clear':
+          await this.state.storage.delete({ prefix: PrefixType.drawing });
+          break;
+      }
 
-                     // 优化存储逻辑
-                     switch (action) {
-                         case 'addStrokes':
-                          await this.state.storage.put(storageKey, metadata);
-                          break;
-                         case 'moveStrokes':
-                             await this.state.storage.put(storageKey, metadata);
-                             break;
-                         case 'removeStrokes':
-                             await this.state.storage.put(storageKey, metadata);
-                             break;
-                         case 'clear':
-                             await this.state.storage.delete({ prefix: PrefixType.drawing });
-                             break;
-                     }
-           if (!data.broadcast) return;
-            const payload = JSON.stringify({
-                                               type: RealTimeCommand.drawingUpdate,
-                                               content: data.content
-                                           });
+      if (!data.broadcast) return;
+      const payload = JSON.stringify({
+        type: RealTimeCommand.drawingUpdate,
+        content: data.content
+      });
 
-           this.broadcast(payload, webSocket);
-
-
-
-       } catch (error) {
-           console.error('Error handling drawing update:', error);
-           // 可以添加错误响应
-          /*
-           webSocket.send(JSON.stringify({
-                         type: RealTimeCommand.error,
-                         content: 'Failed to process drawing update'
-                     }));
-                     */
-           this.sendError(webSocket,ErrorType.DRAWING_UPDATE_FAILED);
-       }
-   }
-
-
+      this.broadcast(payload, webSocket);
+    } catch (error) {
+      console.error('error_handling_drawing_update', error);
+      this.sendError(webSocket, ErrorType.DRAWING_UPDATE_FAILED);
+    }
+  }
 
   // 清空绘图
   private handleClear(webSocket: WebSocket) {
-    // 可根据需要检查用户权限
-
     const payload = JSON.stringify({ type: RealTimeCommand.clear });
-    this.broadcast(payload); // 广播清除消息
+    this.broadcast(payload);
   }
 
   // 广播消息给所有连接者
@@ -584,35 +432,33 @@ private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
     this.messages.push(message);
 
     const payload = JSON.stringify({ type: RealTimeCommand.chat, content: message });
-    this.broadcast(payload); // 广播系统消息
+    this.broadcast(payload);
   }
 
-// 添加一个用于发送错误消息的辅助函数
-private sendError(webSocket: WebSocket, errorType: ErrorType) {
-  webSocket.send(JSON.stringify({
-    type: RealTimeCommand.error,
-    content: errorType
-  }));
-}
-
-
+  // 添加一个用于发送错误消息的辅助函数
+  private sendError(webSocket: WebSocket, errorType: ErrorType) {
+    webSocket.send(JSON.stringify({
+      type: RealTimeCommand.error,
+      content: errorType
+    }));
+  }
 
   // 广播用户列表
   private broadcastUserList() {
     const userList = Array.from(this.users.values());
     const payload = JSON.stringify({ type: RealTimeCommand.userList, content: userList });
-    this.broadcast(payload); // 广播用户列表
+    this.broadcast(payload);
   }
 
   // 处理 fetch 请求
   async fetch(request: Request): Promise<Response> {
     if (request.headers.get('Upgrade') !== 'websocket') {
-      return new Response('Expected WebSocket', { status: 426 });
+      return new Response('expected_websocket', { status: 426 });
     }
 
     const [clientSocket, serverSocket] = Object.values(new WebSocketPair());
-    serverSocket.accept(); // 接受 WebSocket 连接
-    this.handleWebSocket(serverSocket); // 处理 WebSocket
+    serverSocket.accept();
+    this.handleWebSocket(serverSocket);
 
     return new Response(null, { status: 101, webSocket: clientSocket });
   }
@@ -624,20 +470,17 @@ export default {
     const url = new URL(request.url);
 
     if (request.headers.get('Upgrade') === 'websocket') {
-      const roomId = url.searchParams.get('room'); // 获取房间ID
+      const roomId = url.searchParams.get('room');
       if (!roomId) {
-        return new Response('Missing room ID', { status: 400 });
+        return new Response('missing_room_id', { status: 400 });
       }
 
-      // 获取对应的 Durable Object 实例
       const objectId = env.WhiteboardRealTime.idFromName(roomId);
       const stub = env.WhiteboardRealTime.get(objectId);
 
-      // 将请求转发给 Durable Object
       return stub.fetch(request);
     }
 
-    // 处理其他请求，例如静态资源
-    return env.ASSETS.fetch(request); // 使用 Cloudflare 的 ASSETS 处理请求
+    return env.ASSETS.fetch(request);
   },
 };
