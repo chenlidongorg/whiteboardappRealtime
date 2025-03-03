@@ -47,7 +47,6 @@ export enum MessageType {
 
 
 export enum ErrorType {
-  INVALID_FORMAT = 'Invalid message format',
   MISSING_USER_INFO = 'Missing user information',
   USER_NOT_FOUND = 'User not found',
   SESSION_NOT_FOUND = 'User session not found',
