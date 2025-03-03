@@ -160,7 +160,7 @@ export class Chat {
 
     const closeMessage = JSON.stringify({
       type: RealTimeCommand.closeRoom,
-      content: 'room_closed'
+      content: 'room_closed_by_host'
     });
     this.broadcast(closeMessage);
 
@@ -225,7 +225,7 @@ export class Chat {
   private async handleJoin(webSocket: WebSocket, data: WebSocketMessage) {
     if (this.isRoomClosed) {
       this.sendError(webSocket, ErrorType.ROOM_IS_CLOSED);
-      webSocket.close(1000, 'room_is_closed');
+      webSocket.close(1000, ErrorType.ROOM_IS_CLOSED);
       return;
     }
 
@@ -367,7 +367,7 @@ private sanitizeContent(content: string): string {
                 this.sendError(webSocket, ErrorType.RATE_LIMITED);
                 return;
               }
-              
+
     if (data.content) {
       this.state.storage.put(RealTimeCommand.updateBackground, data.content);
       if (!data.broadcast) return;
@@ -450,9 +450,6 @@ private sanitizeContent(content: string): string {
               this.sendError(webSocket, ErrorType.RATE_LIMITED);
               return;
             }
-
-
-
 
 
       const { id, action, model } = data.content;
