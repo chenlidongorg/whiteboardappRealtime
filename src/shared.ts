@@ -57,7 +57,8 @@ export enum ErrorType {
   ROOM_IS_CLOSED = 'room_is_closed',
   USER_NOT_JOINED = 'User not joined',
   INVALID_FORMAT = 'invalid_format',
-  RATE_LIMITED = 'rate_limited' // 新增
+  RATE_LIMITED = 'rate_limited', // 新增
+  ROOM_NOT_EXIST = 'Room_does_not_exist',  // 新增：房间不存在的错误
 }
 
 // 聊天消息
