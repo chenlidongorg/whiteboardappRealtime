@@ -80,6 +80,8 @@ export class Chat {
       if (!data.type) {
         throw new Error('missing_message_type');
       }
+const userId = this.connectionToUser.get(webSocket);
+              if (!userId) return;
 
 
 
@@ -94,12 +96,12 @@ export class Chat {
         case RealTimeCommand.chat: //处理聊天消息
 
 
-        const userId = this.connectionToUser.get(webSocket);
-              if (!userId) return;
-if (this.messageLimiter.isRateLimited(userId)) {
-          this.sendError(webSocket, ErrorType.RATE_LIMITED);
-          return;
-        }
+        if (this.messageLimiter.isRateLimited(userId)) {
+                  this.sendError(webSocket, ErrorType.RATE_LIMITED);
+                  return;
+                }
+
+
 
 
 
@@ -122,8 +124,6 @@ if (this.messageLimiter.isRateLimited(userId)) {
           break;
         case RealTimeCommand.drawingUpdate:
 
-        const userId = this.connectionToUser.get(webSocket);
-              if (!userId) return;
 
 if (this.drawingLimiter.isRateLimited(userId)) {
           this.sendError(webSocket, ErrorType.RATE_LIMITED);
