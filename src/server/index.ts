@@ -81,25 +81,6 @@ export class Chat {
         throw new Error('missing_message_type');
       }
 
-      const userId = this.connectionToUser.get(webSocket);
-            if (!userId) return;
-
-      // 根据消息类型应用不同的速率限制
-            if (data.type === RealTimeCommand.drawingUpdate) {
-            if (this.drawingLimiter.isRateLimited(userId)) {
-                            this.sendError(webSocket, ErrorType.RATE_LIMITED);
-                            return;
-                          }
-
-
-            } else  {
-
-               if (this.messageLimiter.isRateLimited(userId)) {
-                              this.sendError(webSocket, ErrorType.RATE_LIMITED);
-                              return;
-                            }
-            }
-
 
       switch (data.type) {
         case RealTimeCommand.create: //创建房间
