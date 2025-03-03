@@ -82,6 +82,8 @@ export class Chat {
       }
 
 
+
+
       switch (data.type) {
         case RealTimeCommand.create: //创建房间
           this.handleCreate(webSocket, data);
@@ -90,6 +92,17 @@ export class Chat {
           await this.handleJoin(webSocket, data);
           break;
         case RealTimeCommand.chat: //处理聊天消息
+
+
+        const userId = this.connectionToUser.get(webSocket);
+              if (!userId) return;
+if (this.messageLimiter.isRateLimited(userId)) {
+          this.sendError(webSocket, ErrorType.RATE_LIMITED);
+          return;
+        }
+
+
+
           this.handleChat(webSocket, data);
           break;
         case RealTimeCommand.updateBackground:
@@ -108,6 +121,15 @@ export class Chat {
           this.handleClear(webSocket);
           break;
         case RealTimeCommand.drawingUpdate:
+
+        const userId = this.connectionToUser.get(webSocket);
+              if (!userId) return;
+
+if (this.drawingLimiter.isRateLimited(userId)) {
+          this.sendError(webSocket, ErrorType.RATE_LIMITED);
+          return;
+        }
+
           await this.handleDrawingUpdate(webSocket, data);
           break;
         case RealTimeCommand.closeRoom:
