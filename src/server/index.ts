@@ -30,6 +30,11 @@ export class Chat {
   private connections: Set<WebSocket> = new Set(); // 连接集合
   private connectionToUser: Map<WebSocket, string> = new Map(); // WebSocket 到用户的映射
 
+  private messageLimiter = new RateLimiter(10, 5000); // 5秒内最多10条消息
+  private drawingLimiter = new RateLimiter(100, 5000); // 5秒内最多100次绘图操作
+
+
+
   constructor(private state: DurableObjectState, private env: Env) {
     // 构造函数，用于初始化持久化状态
   }
@@ -75,6 +80,26 @@ export class Chat {
       if (!data.type) {
         throw new Error('missing_message_type');
       }
+
+      const userId = this.connectionToUser.get(webSocket);
+            if (!userId) return;
+
+      // 根据消息类型应用不同的速率限制
+            if (data.type === RealTimeCommand.drawingUpdate) {
+            if (this.drawingLimiter.isRateLimited(userId)) {
+                            this.sendError(webSocket, ErrorType.RATE_LIMITED);
+                            return;
+                          }
+
+
+            } else  {
+
+               if (this.messageLimiter.isRateLimited(userId)) {
+                              this.sendError(webSocket, ErrorType.RATE_LIMITED);
+                              return;
+                            }
+            }
+
 
       switch (data.type) {
         case RealTimeCommand.create: //创建房间
@@ -285,6 +310,22 @@ export class Chat {
     this.broadcastUserList();
   }
 
+
+// 添加内容净化方法
+private sanitizeContent(content: string): string {
+  // 移除可能的HTML/JS注入
+  let sanitized = content
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+  // 可以添加更多过滤逻辑，如敏感词过滤等
+
+  return sanitized;
+}
+
   // 处理聊天消息
   private handleChat(webSocket: WebSocket, data: WebSocketMessage) {
     const userId = this.connectionToUser.get(webSocket);
@@ -296,11 +337,28 @@ export class Chat {
     const user = this.users.get(userId);
     if (!user) return;
 
+
+    // 验证消息内容
+      const content = data.content?.content;
+      if (!content || typeof content !== 'string') {
+        this.sendError(webSocket, ErrorType.INVALID_FORMAT);
+        return;
+      }
+
+      // 检查消息长度
+      if (content.length > 1000) { // 限制消息长度
+        this.sendError(webSocket, ErrorType.MESSAGE_TOO_LONG);
+        return;
+      }
+
+      // 简单的内容过滤，可以根据需要扩展
+      const filteredContent = this.sanitizeContent(content);
+
     const message: ChatMessage = {
       id: crypto.randomUUID(),
       userId: user.userId,
       userName: user.userName,
-      content: data.content?.content,
+      content: filteredContent,
       timestamp: Date.now(),
       messageType: MessageType.TEXT,
     };
@@ -464,6 +522,48 @@ export class Chat {
   }
 }
 
+
+class RateLimiter {
+  private requestCounts: Map<string, {count: number, timestamp: number}> = new Map();
+  private maxRequests: number;
+  private windowMs: number;
+
+  constructor(maxRequests: number = 50, windowMs: number = 60000) {
+    this.maxRequests = maxRequests;
+    this.windowMs = windowMs;
+  }
+
+  isRateLimited(key: string): boolean {
+    const now = Date.now();
+    const record = this.requestCounts.get(key);
+
+    if (!record) {
+      this.requestCounts.set(key, { count: 1, timestamp: now });
+      return false;
+    }
+
+    if (now - record.timestamp > this.windowMs) {
+      // 如果时间窗口已过，重置计数
+      this.requestCounts.set(key, { count: 1, timestamp: now });
+      return false;
+    }
+
+    if (record.count >= this.maxRequests) {
+      return true; // 速率限制触发
+    }
+
+    // 更新请求计数
+    record.count += 1;
+    this.requestCounts.set(key, record);
+    return false;
+  }
+}
+
+
+
+
+
+
 // 默认导出用于 Cloudflare Worker 处理 fetch 请求
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -484,3 +584,4 @@ export default {
     return env.ASSETS.fetch(request);
   },
 };
+

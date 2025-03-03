@@ -56,7 +56,9 @@ export enum ErrorType {
   PERMISSION_DENIED = 'Permission denied',
   ONLY_HOST_CAN_DO = 'Only host can close the room',
   ROOM_IS_CLOSED = 'Room is closed',
-  USER_NOT_JOINED = 'User not joined'
+  USER_NOT_JOINED = 'User not joined',
+  INVALID_FORMAT = 'invalid_format',
+  RATE_LIMITED = 'rate_limited' // 新增
 }
 
 // 聊天消息
