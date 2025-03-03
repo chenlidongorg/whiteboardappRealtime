@@ -80,10 +80,6 @@ export class Chat {
       if (!data.type) {
         throw new Error('missing_message_type');
       }
-const userId = this.connectionToUser.get(webSocket);
-              if (!userId) return;
-
-
 
 
       switch (data.type) {
@@ -94,16 +90,6 @@ const userId = this.connectionToUser.get(webSocket);
           await this.handleJoin(webSocket, data);
           break;
         case RealTimeCommand.chat: //处理聊天消息
-
-
-        if (this.messageLimiter.isRateLimited(userId)) {
-                  this.sendError(webSocket, ErrorType.RATE_LIMITED);
-                  return;
-                }
-
-
-
-
 
           this.handleChat(webSocket, data);
           break;
@@ -123,12 +109,6 @@ const userId = this.connectionToUser.get(webSocket);
           this.handleClear(webSocket);
           break;
         case RealTimeCommand.drawingUpdate:
-
-
-if (this.drawingLimiter.isRateLimited(userId)) {
-          this.sendError(webSocket, ErrorType.RATE_LIMITED);
-          return;
-        }
 
           await this.handleDrawingUpdate(webSocket, data);
           break;
@@ -337,6 +317,11 @@ private sanitizeContent(content: string): string {
       return;
     }
 
+       if (this.messageLimiter.isRateLimited(userId)) {
+                      this.sendError(webSocket, ErrorType.RATE_LIMITED);
+                      return;
+                    }
+
     const user = this.users.get(userId);
     if (!user) return;
 
@@ -421,7 +406,21 @@ private sanitizeContent(content: string): string {
   private async handleDrawingUpdate(webSocket: WebSocket, data: WebSocketMessage) {
     if (!data.content) return;
 
+
     try {
+
+    const userId = this.connectionToUser.get(webSocket);
+      if (!userId) return;
+
+    if (this.drawingLimiter.isRateLimited(userId)) {
+              this.sendError(webSocket, ErrorType.RATE_LIMITED);
+              return;
+            }
+
+
+
+
+
       const { id, action, model } = data.content;
 
       if (!['addStrokes', 'moveStrokes', 'removeStrokes', 'clear'].includes(action)) {
