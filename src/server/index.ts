@@ -359,6 +359,15 @@ private sanitizeContent(content: string): string {
 
   // 处理背景更新的具体实现
   private handleUpdateBackground(webSocket: WebSocket, data: WebSocketMessage) {
+
+  const userId = this.connectionToUser.get(webSocket);
+        if (!userId) return;
+
+      if (this.drawingLimiter.isRateLimited(userId)) {
+                this.sendError(webSocket, ErrorType.RATE_LIMITED);
+                return;
+              }
+              
     if (data.content) {
       this.state.storage.put(RealTimeCommand.updateBackground, data.content);
       if (!data.broadcast) return;
@@ -369,6 +378,15 @@ private sanitizeContent(content: string): string {
 
   // 处理移动层更新
   private async handleUpdateMoveView(webSocket: WebSocket, data: WebSocketMessage) {
+
+  const userId = this.connectionToUser.get(webSocket);
+        if (!userId) return;
+
+      if (this.drawingLimiter.isRateLimited(userId)) {
+                this.sendError(webSocket, ErrorType.RATE_LIMITED);
+                return;
+              }
+
     if (data.content) {
       const { id, model } = data.content;
       const metadata: Metadata = {
@@ -390,7 +408,23 @@ private sanitizeContent(content: string): string {
 
   // 处理删除移动层
   private async handleDeleteMoveView(webSocket: WebSocket, data: WebSocketMessage) {
+
+  const userId = this.connectionToUser.get(webSocket);
+        if (!userId) return;
+
+      if (this.drawingLimiter.isRateLimited(userId)) {
+                this.sendError(webSocket, ErrorType.RATE_LIMITED);
+                return;
+              }
+
+
+
     if (data.content) {
+
+
+
+
+
       const { id } = data.content;
       const storageKey = `${PrefixType.moveView}${id}`;
       await this.state.storage.delete(storageKey);
