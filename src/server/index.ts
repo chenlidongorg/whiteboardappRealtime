@@ -225,14 +225,9 @@ export class Chat {
 
         // 确保只有 HOST 角色的用户才能创建房间
           if (data.content.role !== UserRole.HOST) {
-            webSocket.send(JSON.stringify({
-              type: RealTimeCommand.error,
-              content: { error: ErrorType.PERMISSION_DENIED, message: "Only HOST can create a room" }
-            }));
+          this.sendError(webSocket, ErrorType.ROOM_IS_CLOSED);
             return;
           }
-
-
 
 
         const userSession = this.loginUserSession(webSocket, userId, userName, role);
@@ -274,10 +269,7 @@ export class Chat {
 
                     // 如果房间不存在且用户不是 HOST，则发送错误
                     if (!roomExists && role !== UserRole.HOST) {
-                      webSocket.send(JSON.stringify({
-                        type: RealTimeCommand.error,
-                        content: { error: ErrorType.ROOM_NOT_EXIST, message: "Room does not exist" }
-                      }));
+                    this.sendError(webSocket, ErrorType.ROOM_IS_CLOSED);
                       return;
                     }
 
