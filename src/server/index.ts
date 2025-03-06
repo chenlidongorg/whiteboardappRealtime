@@ -35,7 +35,6 @@ export class Chat {
     private drawingLimiter = new RateLimiter(100, 5000); // 5秒内最多100次绘图操作
 
 
-
     constructor(private state: DurableObjectState, private env: Env) {
         // 构造函数，用于初始化持久化状态
 
@@ -95,12 +94,12 @@ export class Chat {
                 await this.handleJoin(webSocket, data);
                 break;
             case RealTimeCommand.chat: //处理聊天消息
-
                 this.handleChat(webSocket, data);
                 break;
             case RealTimeCommand.updateBackground:
                 this.handleUpdateBackground(webSocket, data);
                 break;
+
             case RealTimeCommand.updateMoveView: // 处理移动层更新
                 this.handleUpdateMoveView(webSocket, data);
                 break;
@@ -421,6 +420,7 @@ export class Chat {
         }
     }
 
+
     // 处理移动层更新
     private async handleUpdateMoveView(webSocket: WebSocket, data: WebSocketMessage) {
 
@@ -463,12 +463,7 @@ export class Chat {
         }
 
 
-
         if (data.content) {
-
-
-
-
 
             const { id } = data.content;
             const storageKey = `${PrefixType.moveView}${id}`;
@@ -499,7 +494,7 @@ export class Chat {
 
             const { id, action, model } = data.content;
 
-            if (!['addStrokes', 'moveStrokes', 'removeStrokes', 'clear'].includes(action)) {
+            if (!['addStrokes', 'moveStrokes', 'removeStrokes', 'clearStrokes'].includes(action)) {
                 throw new Error('invalid_drawing_action');
             }
 
@@ -521,7 +516,7 @@ export class Chat {
             case 'removeStrokes':
                 await this.state.storage.put(storageKey, metadata);
                 break;
-            case 'clear':
+            case 'clearStrokes':
                 await this.state.storage.delete({ prefix: PrefixType.drawing });
                 break;
             }
@@ -539,7 +534,9 @@ export class Chat {
         }
     }
 
-    // 清空绘图
+
+
+    // 清空所有
     private handleClear(webSocket: WebSocket) {
         const payload = JSON.stringify({ type: RealTimeCommand.clear });
         this.broadcast(payload);
