@@ -21,11 +21,14 @@ interface Metadata {
     timestamp: number; // 用于追踪更新时间
 }
 
+const LEGACY_COLLAB_PROTOCOL_VERSION = 1;
+
 // Chat类定义
 export class Chat {
 
     private isRoomClosed: boolean = false; // 添加房间状态标记
     private fileName: string | null = null; // 存储文件名
+    private roomMinProtocolVersion: number | null = null; // 房间最低协同协议版本（由发起者决定）
     private users: Map<string, UserSession> = new Map(); // 用户列表
     private messages: ChatMessage[] = []; // 聊天记录
     private connections: Set<WebSocket> = new Set(); // 连接集合
@@ -66,6 +69,8 @@ export class Chat {
 
         // 检查是否没有连接用户
         if (this.connections.size === 0) {
+            this.roomMinProtocolVersion = null;
+            this.fileName = null;
             // 清理持久化数据
             this.state.storage.deleteAll()
                 .then(() => {
@@ -129,7 +134,15 @@ export class Chat {
     }
 
     // 注册用户会话
-    private loginUserSession(webSocket: WebSocket, userId: string, userName: string, role: string): UserSession | null {
+    private loginUserSession(
+        webSocket: WebSocket,
+        userId: string,
+        userName: string,
+        role: string,
+        protocolVersion: number,
+        platform?: string,
+        appVersion?: string
+    ): UserSession | null {
         if (!userId || !userName) {
             this.sendError(webSocket, ErrorType.MISSING_USER_INFO);
             return null;
@@ -140,12 +153,48 @@ export class Chat {
             userName,
             role: role || UserRole.VIEWER,
             roomId: this.state.id.toString(),
+            protocolVersion,
+            platform,
+            appVersion,
         };
 
         this.users.set(userId, userSession);
         this.connectionToUser.set(webSocket, userId);
 
         return userSession;
+    }
+
+    private resolveClientProtocolVersion(content: any): number {
+        const protocolVersion = content?.protocolVersion;
+        if (typeof protocolVersion === 'number' && Number.isInteger(protocolVersion) && protocolVersion > 0) {
+            return protocolVersion;
+        }
+        // 兼容旧客户端：未上报协议版本时默认按 v1
+        return LEGACY_COLLAB_PROTOCOL_VERSION;
+    }
+
+    private resolveClientMeta(content: any): { protocolVersion: number; platform?: string; appVersion?: string } {
+        const protocolVersion = this.resolveClientProtocolVersion(content);
+        const platform = typeof content?.platform === 'string' ? content.platform : undefined;
+        const appVersion = typeof content?.appVersion === 'string' ? content.appVersion : undefined;
+
+        return { protocolVersion, platform, appVersion };
+    }
+
+    private validateJoinProtocolCompatibility(webSocket: WebSocket, joinerVersion: number): boolean {
+        const requiredMinVersion = this.roomMinProtocolVersion ?? LEGACY_COLLAB_PROTOCOL_VERSION;
+
+        if (joinerVersion < requiredMinVersion) {
+            this.sendError(webSocket, ErrorType.UPGRADE_REQUIRED);
+            try {
+                webSocket.close(1008, ErrorType.UPGRADE_REQUIRED);
+            } catch (error) {
+                console.error('failed_close_on_upgrade_required', error);
+            }
+            return false;
+        }
+
+        return true;
     }
 
     // 处理关闭房间的方法
@@ -184,6 +233,8 @@ export class Chat {
         this.users.clear();
         this.connectionToUser.clear();
         this.messages = [];
+        this.roomMinProtocolVersion = null;
+        this.fileName = null;
         await this.state.storage.deleteAll();
     }
 
@@ -211,25 +262,24 @@ export class Chat {
 
     // 处理创建房间逻辑
     private handleCreate(webSocket: WebSocket, data: WebSocketMessage) {
-        const { userId, userName, role, fileName } = data.content;
+        if (!data.content || !data.content.userId || !data.content.userName || !data.content.role) {
+            this.sendError(webSocket, ErrorType.MISSING_USER_INFO);
+            return;
+        }
 
-// 检查是否有用户信息
-  if (!data.content || !data.content.userId || !data.content.userName || !data.content.role) {
-    webSocket.send(JSON.stringify({
-      type: RealTimeCommand.error,
-      content: { error: ErrorType.MISSING_USER_INFO }
-    }));
-    return;
-  }
+        const { userId, userName, role, fileName } = data.content;
+        const { protocolVersion, platform, appVersion } = this.resolveClientMeta(data.content);
 
         // 确保只有 HOST 角色的用户才能创建房间
-          if (data.content.role !== UserRole.HOST) {
-          this.sendError(webSocket, ErrorType.ROOM_IS_CLOSED);
+        if (role !== UserRole.HOST) {
+            this.sendError(webSocket, ErrorType.ROOM_IS_CLOSED);
             return;
-          }
+        }
 
+        // 发起者协议版本决定房间最低版本
+        this.roomMinProtocolVersion = protocolVersion;
 
-        const userSession = this.loginUserSession(webSocket, userId, userName, role);
+        const userSession = this.loginUserSession(webSocket, userId, userName, role, protocolVersion, platform, appVersion);
         if (!userSession) return;
 
         this.state.storage.deleteAll();
@@ -250,37 +300,35 @@ export class Chat {
             return;
         }
 
-        const { userId, userName, role } = data.content;
-
-        // 检查是否有用户信息
-          if (!data.content || !data.content.userId || !data.content.userName || !data.content.role) {
-            webSocket.send(JSON.stringify({
-              type: RealTimeCommand.error,
-              content: { error: ErrorType.MISSING_USER_INFO }
-            }));
+        if (!data.content || !data.content.userId || !data.content.userName || !data.content.role) {
+            this.sendError(webSocket, ErrorType.MISSING_USER_INFO);
             return;
-          }
+        }
 
+        const { userId, userName, role } = data.content;
+        const { protocolVersion, platform, appVersion } = this.resolveClientMeta(data.content);
 
+        // 检查房间是否存在 (通过检查是否有其他用户或者是否有 HOST 用户)
+        const roomExists = this.users.size > 0;
 
-          // 检查房间是否存在 (通过检查是否有其他用户或者是否有 HOST 用户)
-                    const roomExists = this.users.size > 0; // && Array.from(this.users.values()).some(user => user.role === UserRole.HOST);
+        // 如果房间不存在且用户不是 HOST，则发送错误
+        if (!roomExists && role !== UserRole.HOST) {
+            this.sendError(webSocket, ErrorType.ROOM_IS_CLOSED);
+            return;
+        }
 
-                    // 如果房间不存在且用户不是 HOST，则发送错误
-                    if (!roomExists && role !== UserRole.HOST) {
-                    this.sendError(webSocket, ErrorType.ROOM_IS_CLOSED);
-                      return;
-                    }
+        if (!this.validateJoinProtocolCompatibility(webSocket, protocolVersion)) {
+            return;
+        }
 
-
-
-        const userSession = this.loginUserSession(webSocket, userId, userName, role);
+        const userSession = this.loginUserSession(webSocket, userId, userName, role, protocolVersion, platform, appVersion);
         if (!userSession) return;
 
         let initData: any = {
             messages: this.messages,
             users: Array.from(this.users.values()),
-            fileName: this.fileName
+            fileName: this.fileName,
+            roomMinProtocolVersion: this.roomMinProtocolVersion ?? LEGACY_COLLAB_PROTOCOL_VERSION
         };
 
         // 安全地获取和添加 moveModels

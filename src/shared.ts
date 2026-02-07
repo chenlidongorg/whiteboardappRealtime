@@ -36,6 +36,9 @@ export interface UserSession {
   userName: string;
   role?: UserRole;
   roomId?: string;
+  protocolVersion?: number;
+  platform?: string;
+  appVersion?: string;
 }
 
 // 消息类型
@@ -58,8 +61,9 @@ export enum ErrorType {
   ROOM_IS_CLOSED = 'room_is_closed',
   USER_NOT_JOINED = 'User not joined',
   INVALID_FORMAT = 'invalid_format',
-  RATE_LIMITED = 'rate_limited', // 新增
-  ROOM_NOT_EXIST = 'Room_does_not_exist',  // 新增：房间不存在的错误
+  RATE_LIMITED = 'rate_limited',
+  ROOM_NOT_EXIST = 'Room_does_not_exist',
+  UPGRADE_REQUIRED = 'upgrade_required',
 }
 
 // 聊天消息
@@ -71,4 +75,3 @@ export interface ChatMessage {
   timestamp: number;
   messageType: MessageType;
 }
-
