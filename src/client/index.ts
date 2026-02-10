@@ -78,11 +78,16 @@ function renderPage() {
 
   root.innerHTML = `
     <div class="landing-page">
-      <header class="hero">
-        <img src="https://files.whiteboardapp.org/id490633790.png" alt="${t('logo_alt')}" class="logo">
-        <h1>${t('title')}</h1>
-        <p class="hero-text">${t('hero_text')}</p>
+      <header class="brand-card">
+        <div class="brand-row">
+          <img src="https://files.whiteboardapp.org/id490633790.png" alt="${t('logo_alt')}" class="logo">
+          <h1>${t('title')}</h1>
+        </div>
       </header>
+
+      <section class="hero-card">
+        <p class="hero-text">${t('hero_text')}</p>
+      </section>
 
       ${inviteSection}
 

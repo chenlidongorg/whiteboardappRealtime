@@ -25,30 +25,49 @@ body {
   padding: 24px 16px 40px;
 }
 
-.hero {
-  text-align: center;
+.brand-card {
   background: #ffffff;
   border: 1px solid #e3e8f0;
   border-radius: 14px;
-  padding: 24px 16px;
+  padding: 18px 16px;
   box-shadow: 0 8px 24px rgba(20, 35, 64, 0.06);
 }
 
-.logo {
-  width: 86px;
-  height: 86px;
-  border-radius: 18px;
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
-.hero h1 {
-  margin: 10px 0 6px;
-  font-size: 28px;
+.logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  flex-shrink: 0;
+}
+
+.brand-card h1 {
+  margin: 0;
+  font-size: 40px;
+  line-height: 1.15;
+  letter-spacing: -0.4px;
+}
+
+.hero-card {
+  margin-top: 12px;
+  background: #ffffff;
+  border: 1px solid #e3e8f0;
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 8px 24px rgba(20, 35, 64, 0.06);
 }
 
 .hero-text {
   margin: 0;
   color: #4b5f79;
-  font-size: 17px;
+  font-size: 30px;
+  line-height: 1.28;
+  font-weight: 500;
 }
 
 .invite-card {
@@ -222,12 +241,12 @@ footer a:hover {
 }
 
 @media (max-width: 720px) {
-  .hero h1 {
-    font-size: 24px;
+  .brand-card h1 {
+    font-size: 32px;
   }
 
   .hero-text {
-    font-size: 15px;
+    font-size: 22px;
   }
 
   .card h2 {
