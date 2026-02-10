@@ -91,24 +91,25 @@ function renderPage() {
             <li>
               打开白板后进入 <strong>Export / 导出文件</strong>。
               <div class="step-location">位置信息：在 app 底部倒数第三个按钮</div>
-              <div class="mock-bottom-bar" aria-label="bottom-toolbar-export-position">
-                <span class="mock-bottom-btn">画笔</span>
-                <span class="mock-bottom-btn">颜色</span>
-                <span class="mock-bottom-btn active">Export/导出文件</span>
-                <span class="mock-bottom-btn">页面</span>
-                <span class="mock-bottom-btn">更多</span>
+              <div class="step-icon-row" aria-label="export-entry-button">
+                <span class="app-btn-icon app-btn-icon-folder" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <path d="M20 6h-8l-2-2H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-1 8h-3v3h-2v-3h-3v-2h3V9h2v3h3v2z" />
+                  </svg>
+                </span>
+                <span class="icon-caption">文件入口按钮（Export / 导出文件）</span>
               </div>
             </li>
             <li>
               在 <strong>Cloud Share</strong> 下点击 <strong>Collaborate</strong>。
               <div class="step-location">位置信息：出来的菜单栏最后一个按钮</div>
-              <div class="mock-menu" aria-label="cloud-share-menu-collaborate-position">
-                <div class="mock-menu-title">Export File</div>
-                <div class="mock-menu-item">Save as PNG</div>
-                <div class="mock-menu-item">Save as PDF</div>
-                <div class="mock-menu-item">Share as Image</div>
-                <div class="mock-menu-section">Cloud Share</div>
-                <div class="mock-menu-item active">Collaborate</div>
+              <div class="step-icon-row" aria-label="collaborate-menu-button">
+                <span class="app-btn-icon app-btn-icon-collab" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zM8 11c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.98 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+                  </svg>
+                </span>
+                <span class="icon-caption">菜单最后一个按钮（Collaborate）</span>
               </div>
             </li>
             <li>点击 <strong>Create Room</strong> 发起协作房间。</li>
@@ -121,13 +122,22 @@ function renderPage() {
           <ol>
             <li>
               在白板中打开协作面板（<strong>Collaborate</strong>）。
-              <div class="step-location">位置信息：先点 app 底部倒数第三个按钮（Export / 导出文件）</div>
-              <div class="mock-bottom-bar" aria-label="bottom-toolbar-collaborate-entry-position">
-                <span class="mock-bottom-btn">画笔</span>
-                <span class="mock-bottom-btn">颜色</span>
-                <span class="mock-bottom-btn active">Export/导出文件</span>
-                <span class="mock-bottom-btn">页面</span>
-                <span class="mock-bottom-btn">更多</span>
+              <div class="step-location">位置信息：先点 app 底部倒数第三个按钮（Export / 导出文件），再点菜单最后一个 Collaborate</div>
+              <div class="step-icon-row" aria-label="join-entry-button-export">
+                <span class="app-btn-icon app-btn-icon-folder" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <path d="M20 6h-8l-2-2H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-1 8h-3v3h-2v-3h-3v-2h3V9h2v3h3v2z" />
+                  </svg>
+                </span>
+                <span class="icon-caption">先点：Export / 导出文件</span>
+              </div>
+              <div class="step-icon-row" aria-label="join-entry-button-collaborate">
+                <span class="app-btn-icon app-btn-icon-collab" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zM8 11c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.98 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+                  </svg>
+                </span>
+                <span class="icon-caption">再点：Collaborate</span>
               </div>
             </li>
             <li>将邀请码粘贴到 <strong>Invite Code</strong> 输入框。</li>
