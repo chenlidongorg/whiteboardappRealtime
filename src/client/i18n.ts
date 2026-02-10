@@ -1,60 +1,172 @@
 import i18n from 'i18next';
 
-// 获取保存的语言设置或使用默认语言
 const savedLanguage = localStorage.getItem('preferred-language') || 'en';
 
-   i18n.init({
-     lng: savedLanguage, // 使用保存的语言
-     resources: {
-       en: {
-         translation: {
-           title: "Whiteboard Realtime",
-           hero_title: "Real-time Collaboration Whiteboard",
-           description: "Experience smooth multi-person collaboration on iOS devices",
-           real_time_feature: "Real-time Collaboration",
-           chat_feature: "Instant Messaging",
-           secure_feature: "Secure and Reliable",
-           download_now: "Download iOS App Now",
-           footer: "&copy; 2024 Whiteboard Realtime. All rights reserved."
-         }
-       },
-       zh: {
-         translation: {
-           title: "实时协作白板",
-           hero_title: "实时协作白板",
-           description: "在iOS设备上体验流畅的多人协作白板",
-           real_time_feature: "实时协作",
-           chat_feature: "即时通讯",
-           secure_feature: "安全可靠",
-           download_now: "立即下载iOS应用",
-           footer: "&copy; 2024 Whiteboard Realtime. 版权所有。"
-         }
-       },
-       ja: {
-         translation: {
-           title: "リアルタイムコラボレーションホワイトボード",
-           hero_title: "リアルタイムコラボレーションホワイトボード",
-           description: "iOSデバイスでスムーズなマルチコラボレーションを体験してください",
-           real_time_feature: "リアルタイムコラボレーション",
-           chat_feature: "インスタントメッセージング",
-           secure_feature: "安全で信頼できる",
-           download_now: "iOSアプリを今すぐダウンロード",
-           footer: "&copy; 2024 Whiteboard Realtime. すべての権利を保有。"
-         }
-       },
-       ar: {
-         translation: {
-           title: "لوحة التعاون في الوقت الفعلي",
-           hero_title: "لوحة التعاون في الوقت الفعلي",
-           description: "استمتع بتعاون متعدد الأشخاص السلس على أجهزة iOS",
-           real_time_feature: "التعاون في الوقت الحقيقي",
-           chat_feature: "الرسائل الفورية",
-           secure_feature: "آمن وموثوق",
-           download_now: "قم بتنزيل تطبيق iOS الآن",
-           footer: "حقوق النشر &copy; 2024 Whiteboard Realtime. جميع الحقوق محفوظة."
-         }
-       }
-     }
-   });
+i18n.init({
+  lng: savedLanguage,
+  fallbackLng: 'en',
+  resources: {
+    en: {
+      translation: {
+        title: 'Whiteboard Realtime',
+        logo_alt: 'Whiteboard Logo',
+        hero_text: 'Experience smooth multi-person collaboration on iOS devices and Android devices',
+        invite_label: 'Collaboration Invite Code',
+        copy_button: 'Copy',
+        copy_success: 'Copied',
+        copy_failed: 'Copy Failed',
+        section_download: 'Downloads',
+        download_ios_label: 'iOS / macOS',
+        download_google_label: 'Google Play',
+        download_android_label: 'Android Direct Download',
+        download_tip: 'Or search "白板" in your app market and verify the logo before installing.',
+        section_create: 'How to Create',
+        section_join: 'How to Join',
+        export_action_label: 'Export / 导出文件',
+        cloud_share_label: 'Cloud Share',
+        collaborate_label: 'Collaborate',
+        create_step_1_lead: 'Open Whiteboard and go to',
+        create_step_2_prefix: 'Under',
+        create_step_2_middle: 'tap',
+        create_step_3: 'Tap Create Room to start a collaboration room.',
+        create_step_4: 'Copy the invite code and share it with collaborators.',
+        join_step_1_lead: 'Open the collaboration panel (',
+        join_step_1_tail: ')',
+        join_step_2: 'Paste the invite code into the Invite Code input box.',
+        join_step_3: 'Tap Join by Code to enter collaboration.',
+        join_step_4: 'If the current file does not match, the app will switch to the related collaboration file (infinite canvas).',
+        location_export: 'Position: the third button from the right on the bottom toolbar',
+        location_collab_menu: 'Position: the last button in the menu',
+        location_join_entry: 'Position: tap the third button from the right (Export / 导出文件), then tap the last menu button Collaborate.',
+        caption_export_entry: 'File entry button (Export / 导出文件)',
+        caption_collab_menu: 'Last menu button (Collaborate)',
+        caption_join_export: 'First: Export / 导出文件',
+        caption_join_collab: 'Then: Collaborate',
+        more_information: 'More Information',
+        footer: '© 2024 Whiteboard Realtime. All rights reserved.'
+      }
+    },
+    zh: {
+      translation: {
+        title: 'Whiteboard Realtime',
+        logo_alt: '白板 Logo',
+        hero_text: 'Experience smooth multi-person collaboration on iOS devices and Android devices',
+        invite_label: '协同 邀请码',
+        copy_button: '复制',
+        copy_success: '已复制',
+        copy_failed: '复制失败',
+        section_download: '安装下载',
+        download_ios_label: 'iOS / macOS',
+        download_google_label: 'Google Play',
+        download_android_label: '安卓官方下载',
+        download_tip: '或在各个应用市场搜索“白板”，核对好 logo 后安装即可。',
+        section_create: '如何发起',
+        section_join: '如何加入',
+        export_action_label: 'Export / 导出文件',
+        cloud_share_label: 'Cloud Share',
+        collaborate_label: 'Collaborate',
+        create_step_1_lead: '打开白板后进入',
+        create_step_2_prefix: '在',
+        create_step_2_middle: '下点击',
+        create_step_3: '点击 Create Room 发起协作房间。',
+        create_step_4: '复制邀请码并分享给协作者。',
+        join_step_1_lead: '在白板中打开协作面板（',
+        join_step_1_tail: '）',
+        join_step_2: '将邀请码粘贴到 Invite Code 输入框。',
+        join_step_3: '点击 Join by Code 即可加入协作。',
+        join_step_4: '若当前文件不匹配，客户端会自动切换到对应协作文件（无限画布）。',
+        location_export: '位置信息：在 app 底部倒数第三个按钮',
+        location_collab_menu: '位置信息：出来的菜单栏最后一个按钮',
+        location_join_entry: '位置信息：先点 app 底部倒数第三个按钮（Export / 导出文件），再点菜单最后一个 Collaborate',
+        caption_export_entry: '文件入口按钮（Export / 导出文件）',
+        caption_collab_menu: '菜单最后一个按钮（Collaborate）',
+        caption_join_export: '先点：Export / 导出文件',
+        caption_join_collab: '再点：Collaborate',
+        more_information: '更多信息',
+        footer: '© 2024 Whiteboard Realtime. 版权所有。'
+      }
+    },
+    ja: {
+      translation: {
+        title: 'Whiteboard Realtime',
+        logo_alt: 'ホワイトボード ロゴ',
+        hero_text: 'iOS と Android で、スムーズなマルチユーザー共同編集を体験できます',
+        invite_label: '共同編集 招待コード',
+        copy_button: 'コピー',
+        copy_success: 'コピー完了',
+        copy_failed: 'コピー失敗',
+        section_download: 'ダウンロード',
+        download_ios_label: 'iOS / macOS',
+        download_google_label: 'Google Play',
+        download_android_label: 'Android 公式ダウンロード',
+        download_tip: '各アプリストアで「白板」を検索し、ロゴを確認してからインストールしてください。',
+        section_create: '開始方法',
+        section_join: '参加方法',
+        export_action_label: 'Export / 導出ファイル',
+        cloud_share_label: 'Cloud Share',
+        collaborate_label: 'Collaborate',
+        create_step_1_lead: 'Whiteboard を開き、',
+        create_step_2_prefix: '',
+        create_step_2_middle: 'で',
+        create_step_3: 'Create Room をタップして共同編集ルームを作成します。',
+        create_step_4: '招待コードをコピーして共同編集者に共有します。',
+        join_step_1_lead: '共同編集パネルを開き（',
+        join_step_1_tail: '）',
+        join_step_2: '招待コードを Invite Code 入力欄に貼り付けます。',
+        join_step_3: 'Join by Code をタップして参加します。',
+        join_step_4: '現在のファイルが一致しない場合、関連する共同編集ファイル（無限キャンバス）へ自動切替します。',
+        location_export: '位置情報：アプリ下部ツールバーの右から3番目のボタン',
+        location_collab_menu: '位置情報：表示されたメニューの最後のボタン',
+        location_join_entry: '位置情報：先に右から3番目の Export / 導出ファイル をタップし、次にメニュー最後の Collaborate をタップ',
+        caption_export_entry: 'ファイル入口ボタン（Export / 導出ファイル）',
+        caption_collab_menu: 'メニュー最後のボタン（Collaborate）',
+        caption_join_export: '先に：Export / 導出ファイル',
+        caption_join_collab: '次に：Collaborate',
+        more_information: '詳細情報',
+        footer: '© 2024 Whiteboard Realtime. All rights reserved.'
+      }
+    },
+    ar: {
+      translation: {
+        title: 'Whiteboard Realtime',
+        logo_alt: 'شعار السبورة',
+        hero_text: 'استمتع بتعاون سلس متعدد المستخدمين على أجهزة iOS و Android',
+        invite_label: 'رمز دعوة التعاون',
+        copy_button: 'نسخ',
+        copy_success: 'تم النسخ',
+        copy_failed: 'فشل النسخ',
+        section_download: 'التنزيل',
+        download_ios_label: 'iOS / macOS',
+        download_google_label: 'Google Play',
+        download_android_label: 'تنزيل أندرويد الرسمي',
+        download_tip: 'أو ابحث عن "白板" في متجر التطبيقات وتحقق من الشعار قبل التثبيت.',
+        section_create: 'كيفية البدء',
+        section_join: 'كيفية الانضمام',
+        export_action_label: 'Export / تصدير الملف',
+        cloud_share_label: 'Cloud Share',
+        collaborate_label: 'Collaborate',
+        create_step_1_lead: 'افتح Whiteboard ثم انتقل إلى',
+        create_step_2_prefix: 'ضمن',
+        create_step_2_middle: 'اضغط',
+        create_step_3: 'اضغط Create Room لبدء غرفة تعاون.',
+        create_step_4: 'انسخ رمز الدعوة وشاركه مع المتعاونين.',
+        join_step_1_lead: 'افتح لوحة التعاون (',
+        join_step_1_tail: ')',
+        join_step_2: 'الصق رمز الدعوة في حقل Invite Code.',
+        join_step_3: 'اضغط Join by Code للانضمام.',
+        join_step_4: 'إذا لم يطابق الملف الحالي، سيبدّل التطبيق تلقائيًا إلى ملف التعاون المناسب (لوحة لا نهائية).',
+        location_export: 'الموقع: الزر الثالث من اليمين في الشريط السفلي',
+        location_collab_menu: 'الموقع: آخر زر في القائمة',
+        location_join_entry: 'الموقع: اضغط أولاً على الزر الثالث من اليمين (Export / تصدير الملف)، ثم اضغط آخر زر في القائمة Collaborate.',
+        caption_export_entry: 'زر دخول الملفات (Export / تصدير الملف)',
+        caption_collab_menu: 'آخر زر في القائمة (Collaborate)',
+        caption_join_export: 'أولاً: Export / تصدير الملف',
+        caption_join_collab: 'ثم: Collaborate',
+        more_information: 'مزيد من المعلومات',
+        footer: '© 2024 Whiteboard Realtime. جميع الحقوق محفوظة.'
+      }
+    }
+  }
+});
 
-   export default i18n;
+export default i18n;
