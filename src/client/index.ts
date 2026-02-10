@@ -106,8 +106,10 @@ function renderPage() {
               <div class="step-icon-row" aria-label="export-entry-button">
                 <span class="app-btn-icon app-btn-icon-folder" aria-hidden="true">
                   <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-                    <rect x="8.0" y="4.0" width="13" height="10.5" rx="1.8" ry="1.8" fill="none" stroke="currentColor" stroke-width="1.8" />
-                    <rect x="3.5" y="8.0" width="13" height="10.5" rx="1.8" ry="1.8" fill="none" stroke="currentColor" stroke-width="1.8" />
+                    <rect x="4" y="8" width="13" height="11" rx="1.8" ry="1.8" fill="none" stroke="currentColor" stroke-width="1.8" />
+                    <path d="M14 8h1.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                    <circle cx="18" cy="6" r="4" fill="#3d4a57" />
+                    <path d="M16.2 7.8 19.2 4.8M17.4 4.8h1.8v1.8" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
                   </svg>
                 </span>
                 <span class="icon-caption">${t('caption_export_entry')}</span>
@@ -139,8 +141,10 @@ function renderPage() {
               <div class="step-icon-row" aria-label="join-entry-button-export">
                 <span class="app-btn-icon app-btn-icon-folder" aria-hidden="true">
                   <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-                    <rect x="8.0" y="4.0" width="13" height="10.5" rx="1.8" ry="1.8" fill="none" stroke="currentColor" stroke-width="1.8" />
-                    <rect x="3.5" y="8.0" width="13" height="10.5" rx="1.8" ry="1.8" fill="none" stroke="currentColor" stroke-width="1.8" />
+                    <rect x="4" y="8" width="13" height="11" rx="1.8" ry="1.8" fill="none" stroke="currentColor" stroke-width="1.8" />
+                    <path d="M14 8h1.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                    <circle cx="18" cy="6" r="4" fill="#3d4a57" />
+                    <path d="M16.2 7.8 19.2 4.8M17.4 4.8h1.8v1.8" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
                   </svg>
                 </span>
                 <span class="icon-caption">${t('caption_join_export')}</span>
