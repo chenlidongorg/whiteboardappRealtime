@@ -88,8 +88,29 @@ function renderPage() {
         <section class="card">
           <h2>如何发起</h2>
           <ol>
-            <li>打开白板后进入 <strong>Export / 导出文件</strong>。</li>
-            <li>在 <strong>Cloud Share</strong> 下点击 <strong>Collaborate</strong>。</li>
+            <li>
+              打开白板后进入 <strong>Export / 导出文件</strong>。
+              <div class="step-location">位置信息：在 app 底部倒数第三个按钮</div>
+              <div class="mock-bottom-bar" aria-label="bottom-toolbar-export-position">
+                <span class="mock-bottom-btn">画笔</span>
+                <span class="mock-bottom-btn">颜色</span>
+                <span class="mock-bottom-btn active">Export/导出文件</span>
+                <span class="mock-bottom-btn">页面</span>
+                <span class="mock-bottom-btn">更多</span>
+              </div>
+            </li>
+            <li>
+              在 <strong>Cloud Share</strong> 下点击 <strong>Collaborate</strong>。
+              <div class="step-location">位置信息：出来的菜单栏最后一个按钮</div>
+              <div class="mock-menu" aria-label="cloud-share-menu-collaborate-position">
+                <div class="mock-menu-title">Export File</div>
+                <div class="mock-menu-item">Save as PNG</div>
+                <div class="mock-menu-item">Save as PDF</div>
+                <div class="mock-menu-item">Share as Image</div>
+                <div class="mock-menu-section">Cloud Share</div>
+                <div class="mock-menu-item active">Collaborate</div>
+              </div>
+            </li>
             <li>点击 <strong>Create Room</strong> 发起协作房间。</li>
             <li>复制邀请码并分享给协作者。</li>
           </ol>
@@ -98,7 +119,17 @@ function renderPage() {
         <section class="card">
           <h2>如何加入</h2>
           <ol>
-            <li>在白板中打开协作面板（Collaborate）。</li>
+            <li>
+              在白板中打开协作面板（<strong>Collaborate</strong>）。
+              <div class="step-location">位置信息：先点 app 底部倒数第三个按钮（Export / 导出文件）</div>
+              <div class="mock-bottom-bar" aria-label="bottom-toolbar-collaborate-entry-position">
+                <span class="mock-bottom-btn">画笔</span>
+                <span class="mock-bottom-btn">颜色</span>
+                <span class="mock-bottom-btn active">Export/导出文件</span>
+                <span class="mock-bottom-btn">页面</span>
+                <span class="mock-bottom-btn">更多</span>
+              </div>
+            </li>
             <li>将邀请码粘贴到 <strong>Invite Code</strong> 输入框。</li>
             <li>点击 <strong>Join by Code</strong> 即可加入协作。</li>
             <li>若当前文件不匹配，客户端会自动切换到对应协作文件（无限画布）。</li>
