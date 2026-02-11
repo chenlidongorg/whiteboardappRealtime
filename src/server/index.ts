@@ -26,6 +26,8 @@ const LEGACY_COLLAB_PROTOCOL_VERSION = 1;
 // Chat类定义
 export class Chat {
 
+    private static readonly EMPTY_ROOM_CLEANUP_DELAY_MS = 3 * 60 * 1000; // 空房间延迟清理，避免短暂后台切换导致清库
+
     private isRoomClosed: boolean = false; // 添加房间状态标记
     private fileName: string | null = null; // 存储文件名
     private roomMinProtocolVersion: number | null = null; // 房间最低协同协议版本（由发起者决定）
@@ -36,6 +38,7 @@ export class Chat {
 
     private messageLimiter = new RateLimiter(10, 5000); // 5秒内最多10条消息
     private drawingLimiter = new RateLimiter(100, 5000); // 5秒内最多100次绘图操作
+    private pendingCleanupAt: number | null = null;
 
 
     constructor(private state: DurableObjectState, private env: Env) {
@@ -46,8 +49,60 @@ export class Chat {
 
     }
 
+    private cancelPendingCleanup() {
+        if (this.pendingCleanupAt === null) return;
+        this.pendingCleanupAt = null;
+        this.state.storage.deleteAlarm()
+            .catch((error) => {
+                console.error('failed_cancel_cleanup_alarm', error);
+            });
+    }
+
+    private scheduleEmptyRoomCleanup() {
+        if (this.pendingCleanupAt !== null) return;
+        const cleanupAt = Date.now() + Chat.EMPTY_ROOM_CLEANUP_DELAY_MS;
+        this.pendingCleanupAt = cleanupAt;
+        this.state.storage.setAlarm(cleanupAt)
+            .then(() => {
+                console.log('scheduled_empty_room_cleanup');
+            })
+            .catch((error) => {
+                console.error('failed_schedule_cleanup', error);
+                this.pendingCleanupAt = null;
+            });
+    }
+
+    private async clearRoomData(reason: string) {
+        this.pendingCleanupAt = null;
+        this.connections.clear();
+        this.users.clear();
+        this.connectionToUser.clear();
+        this.messages = [];
+        this.roomMinProtocolVersion = null;
+        this.fileName = null;
+        this.isRoomClosed = false;
+
+        await this.state.storage.deleteAll();
+        await this.state.storage.deleteAlarm();
+        console.log(`cleared_room_data:${reason}`);
+    }
+
+    async alarm() {
+        this.pendingCleanupAt = null;
+        if (this.connections.size > 0) {
+            return;
+        }
+
+        try {
+            await this.clearRoomData('empty_room_timeout');
+        } catch (error) {
+            console.error('failed_cleanup_on_alarm', error);
+        }
+    }
+
     // 处理新连接的 WebSocket
     private handleWebSocket(webSocket: WebSocket) {
+        this.cancelPendingCleanup();
         this.connections.add(webSocket);
         webSocket.addEventListener('message', (event) => this.onMessage(webSocket, event.data));
         webSocket.addEventListener('close', () => this.onClose(webSocket));
@@ -67,18 +122,9 @@ export class Chat {
         }
         this.connections.delete(webSocket);
 
-        // 检查是否没有连接用户
+        // 检查是否没有连接用户：延迟清理，给移动端切后台留缓冲时间
         if (this.connections.size === 0) {
-            this.roomMinProtocolVersion = null;
-            this.fileName = null;
-            // 清理持久化数据
-            this.state.storage.deleteAll()
-                .then(() => {
-                    console.log('cleared_data_user_left');
-                })
-                .catch(error => {
-                    console.error('failed_clear_data', error);
-                });
+            this.scheduleEmptyRoomCleanup();
         }
     }
 
@@ -228,14 +274,8 @@ export class Chat {
             }
         }
 
-        // 清理所有数据
-        this.connections.clear();
-        this.users.clear();
-        this.connectionToUser.clear();
-        this.messages = [];
-        this.roomMinProtocolVersion = null;
-        this.fileName = null;
-        await this.state.storage.deleteAll();
+        // 主持人主动关房：立即清理
+        await this.clearRoomData('host_closed_room');
     }
 
     private handleUserUpdate(webSocket: WebSocket, data: WebSocketMessage) {
@@ -269,6 +309,10 @@ export class Chat {
 
         const { userId, userName, role, fileName } = data.content;
         const { protocolVersion, platform, appVersion } = this.resolveClientMeta(data.content);
+        const hasActiveUsers = this.users.size > 0;
+
+        this.cancelPendingCleanup();
+        this.isRoomClosed = false;
 
         // 确保只有 HOST 角色的用户才能创建房间
         if (role !== UserRole.HOST) {
@@ -279,9 +323,14 @@ export class Chat {
         // 发起者协议版本决定房间最低版本
         this.roomMinProtocolVersion = protocolVersion;
 
+        // 首次创建房间时清理旧缓存；有人在线时视为重连，不清库
+        if (!hasActiveUsers) {
+            await this.state.storage.deleteAll();
+            await this.state.storage.deleteAlarm();
+        }
+
         const userSession = this.loginUserSession(webSocket, userId, userName, role, protocolVersion, platform, appVersion);
         if (!userSession) return;
-        await this.state.storage.deleteAll();
 
         if (fileName) {
             this.fileName = fileName;
@@ -706,4 +755,3 @@ export default {
         return env.ASSETS.fetch(request);
     },
 };
-
