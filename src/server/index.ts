@@ -90,6 +90,7 @@ export class Chat {
     async alarm() {
         this.pendingCleanupAt = null;
         if (this.connections.size > 0) {
+            console.log('skip_cleanup_alarm_active_connections');
             return;
         }
 
@@ -102,7 +103,6 @@ export class Chat {
 
     // 处理新连接的 WebSocket
     private handleWebSocket(webSocket: WebSocket) {
-        this.cancelPendingCleanup();
         this.connections.add(webSocket);
         webSocket.addEventListener('message', (event) => this.onMessage(webSocket, event.data));
         webSocket.addEventListener('close', () => this.onClose(webSocket));
@@ -125,6 +125,7 @@ export class Chat {
         // 检查是否没有连接用户：延迟清理，给移动端切后台留缓冲时间
         if (this.connections.size === 0) {
             this.scheduleEmptyRoomCleanup();
+            console.log('scheduled_cleanup_on_last_disconnect');
         }
     }
 
@@ -310,6 +311,8 @@ export class Chat {
         const { userId, userName, role, fileName } = data.content;
         const { protocolVersion, platform, appVersion } = this.resolveClientMeta(data.content);
         const hasActiveUsers = this.users.size > 0;
+        const wasWaitingCleanup = this.pendingCleanupAt !== null;
+        console.log(`handle_create hasActiveUsers=${hasActiveUsers} wasWaitingCleanup=${wasWaitingCleanup}`);
 
         this.cancelPendingCleanup();
         this.isRoomClosed = false;
@@ -323,10 +326,13 @@ export class Chat {
         // 发起者协议版本决定房间最低版本
         this.roomMinProtocolVersion = protocolVersion;
 
-        // 首次创建房间时清理旧缓存；有人在线时视为重连，不清库
-        if (!hasActiveUsers) {
+        // 首次创建房间时清理旧缓存；若房间正处于空房间宽限期，视为重连不清库
+        if (!hasActiveUsers && !wasWaitingCleanup) {
             await this.state.storage.deleteAll();
             await this.state.storage.deleteAlarm();
+            console.log('handle_create_fresh_room_cleared_storage');
+        } else {
+            console.log('handle_create_reconnect_keep_storage');
         }
 
         const userSession = this.loginUserSession(webSocket, userId, userName, role, protocolVersion, platform, appVersion);
@@ -356,8 +362,14 @@ export class Chat {
         const { userId, userName, role } = data.content;
         const { protocolVersion, platform, appVersion } = this.resolveClientMeta(data.content);
 
-        // 检查房间是否存在 (通过检查是否有其他用户或者是否有 HOST 用户)
-        const roomExists = this.users.size > 0;
+        // 检查房间是否存在：在线用户存在，或处于空房间宽限期，或已有房间协议版本
+        const roomExists =
+            this.users.size > 0 ||
+            this.pendingCleanupAt !== null ||
+            this.roomMinProtocolVersion !== null;
+        console.log(
+            `handle_join roomExists=${roomExists} users=${this.users.size} pendingCleanup=${this.pendingCleanupAt !== null} roomMinVersion=${this.roomMinProtocolVersion ?? 'null'}`
+        );
 
         // 如果房间不存在且用户不是 HOST，则发送错误
         if (!roomExists && role !== UserRole.HOST) {
@@ -369,6 +381,7 @@ export class Chat {
             return;
         }
 
+        this.cancelPendingCleanup();
         const userSession = this.loginUserSession(webSocket, userId, userName, role, protocolVersion, platform, appVersion);
         if (!userSession) return;
 
