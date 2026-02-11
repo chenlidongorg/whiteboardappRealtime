@@ -2,6 +2,8 @@ import './i18n';
 import i18n from './i18n';
 
 const INVITE_PARAM_KEYS = ['invite', 'inviteCode', 'code', 'roomCode'];
+const BRAND_SITE_NAME = 'endlessAI Whiteboard';
+const SHARE_IMAGE_URL = 'https://files.whiteboardapp.org/id490633790.png';
 
 function normalizeInviteCode(raw: string | null): string | null {
   if (!raw) return null;
@@ -48,6 +50,49 @@ function t(key: string): string {
   return String(i18n.t(key));
 }
 
+function setMetaTag(attr: 'name' | 'property', key: string, value: string): void {
+  const selector = `meta[${attr}="${key}"]`;
+  let meta = document.querySelector(selector) as HTMLMetaElement | null;
+  if (!meta) {
+    meta = document.createElement('meta');
+    meta.setAttribute(attr, key);
+    document.head.appendChild(meta);
+  }
+  meta.setAttribute('content', value);
+}
+
+function setCanonical(url: string): void {
+  let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+  if (!canonical) {
+    canonical = document.createElement('link');
+    canonical.setAttribute('rel', 'canonical');
+    document.head.appendChild(canonical);
+  }
+  canonical.href = url;
+}
+
+function updateSeoMeta(): void {
+  const pageTitle = t('title');
+  const description = t('hero_text');
+  const canonicalUrl = `${window.location.origin}${window.location.pathname}`;
+  const shareUrl = window.location.href;
+
+  setMetaTag('name', 'description', description);
+  setMetaTag('property', 'og:type', 'website');
+  setMetaTag('property', 'og:site_name', BRAND_SITE_NAME);
+  setMetaTag('property', 'og:title', pageTitle);
+  setMetaTag('property', 'og:description', description);
+  setMetaTag('property', 'og:image', SHARE_IMAGE_URL);
+  setMetaTag('property', 'og:image:alt', t('logo_alt'));
+  setMetaTag('property', 'og:url', shareUrl);
+  setMetaTag('name', 'twitter:card', 'summary_large_image');
+  setMetaTag('name', 'twitter:title', pageTitle);
+  setMetaTag('name', 'twitter:description', description);
+  setMetaTag('name', 'twitter:image', SHARE_IMAGE_URL);
+  setMetaTag('name', 'twitter:image:alt', t('logo_alt'));
+  setCanonical(canonicalUrl);
+}
+
 function renderPage() {
   const root = document.getElementById('root');
   if (!root) {
@@ -58,10 +103,7 @@ function renderPage() {
   document.documentElement.lang = i18n.language || 'en';
   document.documentElement.dir = i18n.dir(i18n.language);
   document.title = t('title');
-  const descriptionMeta = document.querySelector('meta[name="description"]');
-  if (descriptionMeta) {
-    descriptionMeta.setAttribute('content', t('hero_text'));
-  }
+  updateSeoMeta();
 
   const inviteCode = getInviteCodeFromURL();
   const inviteSection = inviteCode

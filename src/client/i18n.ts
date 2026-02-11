@@ -8,8 +8,8 @@ i18n.init({
   resources: {
     en: {
       translation: {
-        title: 'Whiteboard Realtime',
-        logo_alt: 'Whiteboard Logo',
+        title: 'endlessAI Whiteboard Realtime',
+        logo_alt: 'endlessAI Whiteboard Logo',
         hero_text: 'Experience smooth multi-person collaboration on iOS devices and Android devices',
         invite_label: 'Collaboration Invite Code',
         copy_button: 'Copy',
@@ -50,8 +50,8 @@ i18n.init({
     },
     zh: {
       translation: {
-        title: '白板实时协作',
-        logo_alt: '白板图标',
+        title: '无尽白板实时协作',
+        logo_alt: '无尽白板图标',
         hero_text: '在 iOS 与 Android 设备上体验流畅的多人协作',
         invite_label: '协同邀请码',
         copy_button: '复制',
@@ -92,8 +92,8 @@ i18n.init({
     },
     'zh-Hant': {
       translation: {
-        title: '白板即時協作',
-        logo_alt: '白板圖示',
+        title: '無盡白板即時協作',
+        logo_alt: '無盡白板圖示',
         hero_text: '在 iOS 與 Android 裝置上體驗流暢的多人協作',
         invite_label: '協作邀請碼',
         copy_button: '複製',
@@ -134,7 +134,7 @@ i18n.init({
     },
     ja: {
       translation: {
-        title: 'ホワイトボード リアルタイム協作',
+        title: 'endlessAI Whiteboard Realtime',
         logo_alt: 'ホワイトボードのロゴ',
         hero_text: 'iOS と Android で、スムーズなマルチユーザー協作を体験できます',
         invite_label: '協作 招待コード',
@@ -176,7 +176,7 @@ i18n.init({
     },
     ar: {
       translation: {
-        title: 'السبورة التعاونية الفورية',
+        title: 'endlessAI Whiteboard Realtime',
         logo_alt: 'شعار السبورة',
         hero_text: 'استمتع بتعاون سلس متعدد المستخدمين على أجهزة iOS و Android',
         invite_label: 'رمز دعوة التعاون',
@@ -218,7 +218,7 @@ i18n.init({
     },
     es: {
       translation: {
-        title: 'Pizarra en tiempo real',
+        title: 'endlessAI Whiteboard Realtime',
         logo_alt: 'Logo de pizarra',
         hero_text: 'Disfruta de una colaboración fluida entre varias personas en dispositivos iOS y Android',
         invite_label: 'Código de invitación de colaboración',
@@ -260,7 +260,7 @@ i18n.init({
     },
     pt: {
       translation: {
-        title: 'Whiteboard em tempo real',
+        title: 'endlessAI Whiteboard Realtime',
         logo_alt: 'Logo do Whiteboard',
         hero_text: 'Experimente uma colaboração fluida entre várias pessoas em dispositivos iOS e Android',
         invite_label: 'Código de convite da colaboração',
@@ -302,7 +302,7 @@ i18n.init({
     },
     fr: {
       translation: {
-        title: 'Tableau blanc en temps réel',
+        title: 'endlessAI Whiteboard Realtime',
         logo_alt: 'Logo du tableau blanc',
         hero_text: 'Profitez d\'une collaboration fluide à plusieurs sur iOS et Android',
         invite_label: 'Code d\'invitation à la collaboration',
@@ -344,7 +344,7 @@ i18n.init({
     },
     it: {
       translation: {
-        title: 'Lavagna in tempo reale',
+        title: 'endlessAI Whiteboard Realtime',
         logo_alt: 'Logo della lavagna',
         hero_text: 'Prova una collaborazione fluida multiutente su dispositivi iOS e Android',
         invite_label: 'Codice invito collaborazione',
@@ -386,7 +386,7 @@ i18n.init({
     },
     ru: {
       translation: {
-        title: 'Доска в реальном времени',
+        title: 'endlessAI Whiteboard Realtime',
         logo_alt: 'Логотип Whiteboard',
         hero_text: 'Оцените плавную совместную работу нескольких пользователей на устройствах iOS и Android',
         invite_label: 'Код приглашения для совместной работы',
