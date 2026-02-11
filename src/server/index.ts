@@ -93,7 +93,7 @@ export class Chat {
 
             switch (data.type) {
             case RealTimeCommand.create: //创建房间
-                this.handleCreate(webSocket, data);
+                await this.handleCreate(webSocket, data);
                 break;
             case RealTimeCommand.join: //加入房间
                 await this.handleJoin(webSocket, data);
@@ -261,7 +261,7 @@ export class Chat {
     }
 
     // 处理创建房间逻辑
-    private handleCreate(webSocket: WebSocket, data: WebSocketMessage) {
+    private async handleCreate(webSocket: WebSocket, data: WebSocketMessage) {
         if (!data.content || !data.content.userId || !data.content.userName || !data.content.role) {
             this.sendError(webSocket, ErrorType.MISSING_USER_INFO);
             return;
@@ -281,8 +281,7 @@ export class Chat {
 
         const userSession = this.loginUserSession(webSocket, userId, userName, role, protocolVersion, platform, appVersion);
         if (!userSession) return;
-
-        this.state.storage.deleteAll();
+        await this.state.storage.deleteAll();
 
         if (fileName) {
             this.fileName = fileName;
