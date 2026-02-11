@@ -3,7 +3,7 @@ import i18n from './i18n';
 
 const INVITE_PARAM_KEYS = ['invite', 'inviteCode', 'code', 'roomCode'];
 const BRAND_SITE_NAME = 'endlessAI Whiteboard';
-const SHARE_IMAGE_URL = 'https://files.whiteboardapp.org/id490633790.png';
+const SHARE_IMAGE_PATH = '/logo.png';
 
 function normalizeInviteCode(raw: string | null): string | null {
   if (!raw) return null;
@@ -76,19 +76,20 @@ function updateSeoMeta(): void {
   const description = t('hero_text');
   const canonicalUrl = `${window.location.origin}${window.location.pathname}`;
   const shareUrl = window.location.href;
+  const shareImageUrl = `${window.location.origin}${SHARE_IMAGE_PATH}`;
 
   setMetaTag('name', 'description', description);
   setMetaTag('property', 'og:type', 'website');
   setMetaTag('property', 'og:site_name', BRAND_SITE_NAME);
   setMetaTag('property', 'og:title', pageTitle);
   setMetaTag('property', 'og:description', description);
-  setMetaTag('property', 'og:image', SHARE_IMAGE_URL);
+  setMetaTag('property', 'og:image', shareImageUrl);
   setMetaTag('property', 'og:image:alt', t('logo_alt'));
   setMetaTag('property', 'og:url', shareUrl);
   setMetaTag('name', 'twitter:card', 'summary_large_image');
   setMetaTag('name', 'twitter:title', pageTitle);
   setMetaTag('name', 'twitter:description', description);
-  setMetaTag('name', 'twitter:image', SHARE_IMAGE_URL);
+  setMetaTag('name', 'twitter:image', shareImageUrl);
   setMetaTag('name', 'twitter:image:alt', t('logo_alt'));
   setCanonical(canonicalUrl);
 }
@@ -122,7 +123,7 @@ function renderPage() {
     <div class="landing-page">
       <header class="brand-card">
         <div class="brand-row">
-          <img src="https://files.whiteboardapp.org/id490633790.png" alt="${t('logo_alt')}" class="logo">
+          <img src="/logo.png" alt="${t('logo_alt')}" class="logo">
           <h1>${t('title')}</h1>
         </div>
       </header>
